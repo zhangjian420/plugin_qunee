@@ -1,0 +1,75 @@
+.qtools{
+	width:85%;
+	margin: 0 auto;
+	text-align: left;
+	padding: 5px 0;
+}
+
+.qpanel{
+	height: 500px;
+	width: 85%;
+	margin: 0 auto;
+	background: #fff;
+	border: 1px solid #ccc;
+	position: relative;
+	margin-bottom: 10px;
+}
+
+.qpros{
+    width: 30%;
+    background: #fff;
+    float: right;
+    position: absolute;
+    right: 0;
+    z-index: 10000;
+    display: none;
+    border-left: 1px solid #ccc;
+    border-bottom: 1px solid #ccc;
+}
+
+.qpros-bannel{
+	background: rgba(98,125,77,1);
+	background: -moz-linear-gradient(top, rgba(98,125,77,1) 0%, rgba(31,59,8,1) 100%);
+	background: -webkit-gradient(left top, left bottom, color-stop(0%, rgba(98,125,77,1)), color-stop(100%, rgba(31,59,8,1)));
+	background: -webkit-linear-gradient(top, rgba(98,125,77,1) 0%, rgba(31,59,8,1) 100%);
+	background: -o-linear-gradient(top, rgba(98,125,77,1) 0%, rgba(31,59,8,1) 100%);
+	background: -ms-linear-gradient(top, rgba(98,125,77,1) 0%, rgba(31,59,8,1) 100%);
+	color: snow;
+	height: 18px;
+	line-height:18px;
+	text-align: left;
+	padding: 3px 0 3px 5px;
+}
+
+.qpros-clobtn{
+	float: right;
+    padding-right: 5px;
+    cursor: pointer;
+}
+
+.qpros-content{
+	padding: 5px 0 5px 5px;	
+}
+.qpros-bottom{
+	text-align: right;
+    padding: 5px 5px 0;
+}
+
+.dl-horizontal{margin: 0;}
+.dl-horizontal dt {
+    float: left;
+    width: 80px;
+    clear: left;
+    text-align: right;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    line-height: 30px;
+    height: 30px;
+}
+
+.dl-horizontal dd {
+	line-height: 30px;
+    height: 30px;
+    margin-left: 90px;
+}

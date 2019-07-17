@@ -1,42 +1,72 @@
 <?php
 
 /**
- * °²×°Ê±µÄ·½·¨
+ * å®‰è£…æ—¶çš„æ–¹æ³•
  */
 function plugin_qunee_install() {
-	/* core plugin functionality */
-	api_plugin_register_hook('qunee', 'top_header_tabs', 'qunee_show_tab', 'setup.php');
-	api_plugin_register_hook('qunee', 'top_graph_header_tabs', 'qunee_show_tab', 'setup.php');
+    /* core plugin functionality */
+    api_plugin_register_hook('qunee', 'top_header_tabs', 'qunee_show_tab', 'setup.php');
+    api_plugin_register_hook('qunee', 'top_graph_header_tabs', 'qunee_show_tab', 'setup.php');
+    
+    api_plugin_register_hook('qunee', 'page_head', 'plugin_qunee_page_head', 'setup.php');
+    
+    api_plugin_register_realm('qunee', 'qunee.php', 'æ°”è±¡å›¾', 1);
+    
+    qunee_setup_table();
 }
 
 /**
- * Ð¶ÔØÊ±ºòµÄ·½·¨
+ * å¸è½½æ—¶å€™çš„æ–¹æ³•
  */
 function plugin_qunee_uninstall() {
-   
+    db_execute('DROP TABLE IF EXISTS plugin_qunee');
 }
 
 /**
- * ÓÃÓÚ¼ì²é²å¼þµÄ°æ±¾£¬²¢Ìá¹©¸ü¶àÐÅÏ¢
+ * ç”¨äºŽæ£€æŸ¥æ’ä»¶çš„ç‰ˆæœ¬ï¼Œå¹¶æä¾›æ›´å¤šä¿¡æ¯
  * @return mixed
  */
 function plugin_qunee_version() {
     global $config;
-    $info = parse_ini_file($config['base_path'] . '/plugins/monitor/INFO', true);
+    $info = parse_ini_file($config['base_path'] . '/plugins/qunee/INFO', true);
     return $info['info'];
 }
 
 /**
- * ÓÃÓÚÈ·¶¨ÄúµÄ²å¼þÊÇ·ñÒÑ×¼±¸ºÃÔÚ°²×°ºóÆôÓÃ
+ * ç”¨äºŽç¡®å®šæ‚¨çš„æ’ä»¶æ˜¯å¦å·²å‡†å¤‡å¥½åœ¨å®‰è£…åŽå¯ç”¨
  */
 function plugin_qunee_check_config() {
     return true;
 }
 
 /**
- * ÏÔÊ¾¶¥²¿Ñ¡Ïî¿¨
+ * æ˜¾ç¤ºé¡¶éƒ¨é€‰é¡¹å¡
  */
 function qunee_show_tab() {
     global $config;
-    print '<a href="' . $config['url_path'] . 'plugins/qunee/qunee.php"></a>';
+    print '<a href="' . $config['url_path'] . 'plugins/qunee/qunee.php"><img src="' . $config['url_path'] . 'plugins/monitor/images/tab_monitor.gif" alt="æ°”è±¡å›¾"></a>';
+}
+
+/**
+ * è‡ªå®šä¹‰js
+ */
+function plugin_qunee_page_head() {
+    print get_md5_include_css('plugins/qunee/include/css/qunee.css') . PHP_EOL;
+    print get_md5_include_js('plugins/qunee/include/js/qunee.min.js') . PHP_EOL;
+    print get_md5_include_js('plugins/qunee/include/js/qunee.json.js') . PHP_EOL;
+    print get_md5_include_js('plugins/qunee/include/js/qunee.common.js') . PHP_EOL;
+}
+
+function qunee_setup_table() {
+    if (!db_table_exists('plugin_qunee')) {
+        db_execute("CREATE TABLE IF NOT EXISTS plugin_qunee (
+            `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+            `name` varchar(100) COLLATE utf8mb4_unicode_ci NOT NULL DEFAULT '',
+            `last_modified` timestamp NOT NULL DEFAULT '0000-00-00 00:00:00',
+            `modified_by` int(10) unsigned DEFAULT 1,
+            `topo` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
+            PRIMARY KEY (`id`),
+            KEY `name` (`name`) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+    }
+    
 }
