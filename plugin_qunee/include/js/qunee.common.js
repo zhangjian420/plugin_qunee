@@ -1,6 +1,11 @@
 (function(Q, $){
 	window.doAction = function($btn,graph,action){
 		switch(action){
+		case "cloud":
+			var group = graph.createGroup("云组",graph.viewportBounds.x + 50,graph.viewportBounds.y + 50);
+			group.groupImage = graphs.group_cloud;
+			group.padding = 30;
+			break;
 		case "new":
 			var node = graph.createNode("新设备",graph.viewportBounds.x + 50,graph.viewportBounds.y + 50);
 			node.image = "./include/imgs/server.png";
@@ -26,6 +31,7 @@
 			}
 			queren("确认删除选中节点？",function(){
 				graph.removeSelection();
+				refreshHostIds();
 			});
 			break;
 		case "bg":
@@ -55,14 +61,46 @@
 		}
 	}
 	
-	var pageName = basename($(location).attr('pathname'));
+	var path = "qunee.php";
 	var items = {
+		group:[{
+			label:"标签",
+			type:"text",
+			name:"name",
+			from:"name"
+		},{
+			label:"标签位置",
+			type:"select",
+			name:"pos",
+			values:{"cb-ct":"下","ct-cb":"上","lm-rm":"左","rm-lm":"右"}
+		},{
+			label:"文字大小",
+			type:"select",
+			name:"label.font.size",
+			values:{
+				"12":"12",
+				"16":"16",
+				"20":"20",
+				"24":"24",
+				"30":"30",
+				"40":"40"
+			},
+			value_type:"num"
+		},{
+			label:"文字颜色",
+			type:"text",
+			name:"label.color"
+		},{
+			label:"填充颜色",
+			type:"text",
+			name:"render.color"
+		}],
 		node:[{
 			label:"关联设备",
 			type:"ajax_select",
 			name:"host",
 			from:"ajax",
-			url:pageName + "?action=ajax_host"
+			url:path + "?action=ajax_host"
 		},{
 			label:"标签",
 			type:"text",
@@ -107,6 +145,18 @@
 			name:"label.color"
 		}],
 		edge:[{
+			label:"源关联图形",
+			type:"ajax_select",
+			name:"srcg",
+			from:"ajax",
+			url:path + "?action=ajax_graph"
+		},{
+			label:"对端关联图形",
+			type:"ajax_select",
+			name:"destg",
+			from:"ajax",
+			url:path + "?action=ajax_graph"
+		},{
 			label:"标签",
 			type:"text",
 			name:"name",
@@ -162,7 +212,7 @@
 			name:"edge.color"
 		}],
 		text:[{
-			label:"文字内容",
+			label:"标签",
 			type:"text",
 			name:"name",
 			from:"name"
@@ -213,14 +263,14 @@
 			node[obj.name] = input_value;
 			break;
 		case "ajax":
-			var user = {};
+			var user = node.user || {};
 			user[input_name] = input_value;
 			node.user = user;
 			break;
 		}
 	}
 	
-	// 给节点赋值
+	// 点击属性框form中的确定按钮给节点赋值
 	var applyNode = function(node_type,node){
 		var fields = $("#qpros_frm").serializeArray(); // 用户表单输入的值
 		var arr = items[''+node_type+''];
@@ -238,12 +288,21 @@
 		});
 	}
 	
-	// 构件属性框form
-	var bulidJForm = function(node_type,node){
+	// 点击某个设备，谈出构件属性框form
+	var bulidJForm = function(node_type,node,config){
 		var arr = items[node_type],styles = node.styles;
 		var html = '<form id="qpros_frm">';
 			html += '<dl class="dl-horizontal">';
 		$.each(arr,function(index,obj){ // obj为用户的表单配置
+			if(obj.type == "ajax_select" && node.type == "Q.Edge"){ // 构件点击线时候的表单，如果线的起点node没有设置host，或者终点node没有设置host，跳过构件select
+				if(getUserHost(node.from) != "0" && getUserHost(node.to) == "0" && obj.name == "destg"){ // 如果有源端但是没有目的端
+					return;
+				}else if(getUserHost(node.from) == "0" && getUserHost(node.to) != "0" && obj.name == "srcg"){
+					return;
+				}
+			}
+			
+			
 			html += "<dt>" + obj.label + "</dt>";
 			html += "<dd>";
 			if(obj.type == "text"){
@@ -271,7 +330,7 @@
 				html += "</select>";
 			}else if(obj.type == "ajax_select"){ // 在 afterShowQproPanel 中设置 加载
 				html += "<select name='"+obj.name+"' url='"+obj.url+"'>";
-				html += "<option value='-1'>无</option>";
+				html += "<option value='0'>无</option>";
 				html += "</select>";
 			}
 			html += "</dd>";
@@ -285,19 +344,36 @@
 		var $html = $(html);
 		$html.find("button").button().on("click",function(){ // 当点确定时，node应用属性
 			applyNode(node_type,node);
+			if(typeof config.afterApplyNode != 'undefined' && config.afterApplyNode instanceof Function){
+				config.afterApplyNode($html.find("button")[0],node_type,node);
+			}
 		});
-		$html.find("select").selectmenu();
+		$html.find("select").each(function(si,sv){
+			$(sv).selectmenu({create: function(){
+				if(typeof onSelectMenuCreate != 'undefined' && onSelectMenuCreate instanceof Function){
+					onSelectMenuCreate($(sv),node_type,node);
+				}
+			},change:function(){
+				if(typeof onSelectMenuChange != 'undefined' && onSelectMenuChange instanceof Function){
+					onSelectMenuChange($(sv),node_type,node);
+				}
+			}});
+		});
 		$html.find("input").addClass('ui-state-default ui-corner-all').css("width","182px");
 		// 颜色默认值是555，
 		var lcolor = (styles && styles["label.color"]) ? styles["label.color"] : "#555",
-			ecolor = (styles && styles["edge.color"]) ? styles["edge.color"] : "#555";
+			ecolor = (styles && styles["edge.color"]) ? styles["edge.color"] : "#555",
+			fcolor = (styles && styles["render.color"]) ? styles["render.color"] : "#fff";
 		$html.find("input[name='label.color']").colorpicker({
 			color:lcolor,part:{map:{size:128},bar:{size: 128}},colorFormat:"#HEX",rgb:false,hsv:false
 		}).val(lcolor);
 		$html.find("input[name='edge.color']").colorpicker({
 			color:ecolor,part:{map:{size: 128},bar:{size: 128}},colorFormat:"#HEX",rgb:false,hsv:false
 		}).val(ecolor);
-		
+		// 云的填充颜色
+		$html.find("input[name='render.color']").colorpicker({
+			color:fcolor,part:{map:{size: 128},bar:{size: 128}},colorFormat:"#HEX",rgb:false,hsv:false
+		}).val(fcolor);
 		return $html;
 	};
 	
@@ -313,9 +389,12 @@
 			}else if(node.type == "Q.Text"){
 				$("#qpros_title").text("文字信息");
 				node_type = "text";
+			}else if(node.type == "Q.Group"){
+				$("#qpros_title").text("云信息");
+				node_type = "group";
 			}
 			// 构件弹出form
-			var $html = bulidJForm(node_type,node);
+			var $html = bulidJForm(node_type,node,config);
 			$("#qpros_content").empty().append($html);
 			this.show("slide",{direction:'right'},500);
 			if(callback){
@@ -324,7 +403,27 @@
 		}
 	});
 	
-
+	// 获取该节点的host，如果获取不到返回都是字符串 0 
+	window.getUserHost = function(node){
+		try {
+			return node.user.host || "0";
+		} catch (e) {
+			return "0";
+		}
+	};
+	
+	window.getUserGraph = function(node,isFrom){
+		try {
+			if(isFrom){
+				return node.user.srcg || "0";
+			}else{
+				return node.user.destg || "0";
+			}
+		} catch (e) {
+			return "0";
+		}
+	};
+	
 	window.message = function(text) {
 		$("#spanmessage").text(text);
 		$("#message").dialog({

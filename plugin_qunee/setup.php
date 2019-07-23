@@ -19,7 +19,7 @@ function plugin_qunee_install() {
  * 卸载时候的方法
  */
 function plugin_qunee_uninstall() {
-    db_execute('DROP TABLE IF EXISTS plugin_qunee');
+   // db_execute('DROP TABLE IF EXISTS plugin_qunee');
 }
 
 /**
@@ -53,6 +53,7 @@ function qunee_show_tab() {
 function plugin_qunee_page_head() {
     print get_md5_include_css('plugins/qunee/include/css/qunee.css') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.min.js') . PHP_EOL;
+    print get_md5_include_js('plugins/qunee/include/js/graphs.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.json.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.common.js') . PHP_EOL;
 }

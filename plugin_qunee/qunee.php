@@ -51,8 +51,10 @@ switch(get_nfilter_request_var('action')) {
 	    if (get_request_var('site_id') > 0) {
 	        $sql_where = 'site_id = ' . get_request_var('site_id');
 	    }
-	    
 	    get_allowed_ajax_hosts(false, 'applyFilter', $sql_where);
+	    break;
+	case 'ajax_graph':
+	    ajax_graph();
 	    break;
 	default:
 	    break;
@@ -294,10 +296,28 @@ function qunee_save(){
     }
 }
 
+function ajax_graph(){
+    $sql_where = '';
+    $arr = array();
+    if (get_request_var('host_id') != "0") {
+        $sql_where = 'where gl.host_id = ' . get_request_var('host_id');
+        $graphs = db_fetch_assoc(" SELECT gtg.local_graph_id ,gtg.title_cache,gl.host_id
+            FROM graph_templates_graph AS gtg 
+            INNER JOIN graph_local AS gl ON gl.id=gtg.local_graph_id 
+			$sql_where order by gl.host_id desc");
+        $arr[] = array('local_graph_id' => "0",'title_cache' => "无");
+        if (cacti_sizeof($graphs)) {
+            foreach($graphs as $graph) {
+                $arr[] = array('local_graph_id' => $graph['local_graph_id'],'title_cache' => $graph['title_cache']);
+            }
+        }
+    }
+    print json_encode($arr);
+}
+
 /* ------------------------
  The 'actions' function
  ------------------------ */
-
 function form_actions() {
     global $qunee_actions;
     
