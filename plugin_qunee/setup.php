@@ -55,6 +55,7 @@ function plugin_qunee_page_head() {
     print get_md5_include_js('plugins/qunee/include/js/qunee.min.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/graphs.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.json.js') . PHP_EOL;
+    print get_md5_include_js('plugins/qunee/include/js/qunee.formitem.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.common.js') . PHP_EOL;
 }
 

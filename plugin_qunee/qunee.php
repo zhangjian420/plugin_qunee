@@ -3,6 +3,8 @@ $guest_account=true;
 
 chdir('../../');
 include_once('./include/auth.php');
+include_once($config['base_path'] . '/lib/rrd.php');
+include_once($config['base_path'] . '/plugins/qunee/qunee_functions.php');
 
 $qunee_actions = array(
     1 => __('Delete')
@@ -55,6 +57,9 @@ switch(get_nfilter_request_var('action')) {
 	    break;
 	case 'ajax_graph':
 	    ajax_graph();
+	    break;
+	case 'ajax_data':
+	    ajax_data();
 	    break;
 	default:
 	    break;
@@ -313,6 +318,22 @@ function ajax_graph(){
         }
     }
     print json_encode($arr);
+}
+
+function ajax_data(){
+    $ret = array();
+    if (isset_request_var('graph_ids') && !isempty_request_var("graph_ids")) {
+        $graph_ids = get_request_var('graph_ids');
+        $local_graph_ids = explode(",", $graph_ids);
+        if (cacti_sizeof($local_graph_ids)) {
+            foreach($local_graph_ids as $local_graph_id) {
+                $local_data_id = get_local_data_id($local_graph_id);
+                $ref_values = qunee_get_ref_value($local_data_id, time(), 60);
+                $ret[$local_graph_id] = $ref_values;
+            }
+        }
+    }
+    print json_encode($ret);
 }
 
 /* ------------------------

@@ -2,9 +2,9 @@
 	window.doAction = function($btn,graph,action){
 		switch(action){
 		case "cloud":
-			var group = graph.createGroup("云组",graph.viewportBounds.x + 50,graph.viewportBounds.y + 50);
-			group.groupImage = graphs.group_cloud;
-			group.padding = 30;
+			var subnetwork = graph.createNode("",graph.viewportBounds.x + 50,graph.viewportBounds.y + 50);
+			subnetwork.image = graphs.group_cloud;
+			subnetwork.enableSubNetwork = true;
 			break;
 		case "new":
 			var node = graph.createNode("新设备",graph.viewportBounds.x + 50,graph.viewportBounds.y + 50);
@@ -31,7 +31,7 @@
 			}
 			queren("确认删除选中节点？",function(){
 				graph.removeSelection();
-				refreshHostIds();
+				forEachGraph();
 			});
 			break;
 		case "bg":
@@ -61,181 +61,7 @@
 		}
 	}
 	
-	var path = "qunee.php";
-	var items = {
-		group:[{
-			label:"标签",
-			type:"text",
-			name:"name",
-			from:"name"
-		},{
-			label:"标签位置",
-			type:"select",
-			name:"pos",
-			values:{"cb-ct":"下","ct-cb":"上","lm-rm":"左","rm-lm":"右"}
-		},{
-			label:"文字大小",
-			type:"select",
-			name:"label.font.size",
-			values:{
-				"12":"12",
-				"16":"16",
-				"20":"20",
-				"24":"24",
-				"30":"30",
-				"40":"40"
-			},
-			value_type:"num"
-		},{
-			label:"文字颜色",
-			type:"text",
-			name:"label.color"
-		},{
-			label:"填充颜色",
-			type:"text",
-			name:"render.color"
-		}],
-		node:[{
-			label:"关联设备",
-			type:"ajax_select",
-			name:"host",
-			from:"ajax",
-			url:path + "?action=ajax_host"
-		},{
-			label:"标签",
-			type:"text",
-			name:"name",
-			from:"name"
-		},{
-			label:"标签位置",
-			type:"select",
-			name:"pos",
-			values:{"cb-ct":"下","ct-cb":"上","lm-rm":"左","rm-lm":"右"}
-		},{
-			label:"设备图形",
-			type:"select",
-			name:"image",
-			values:{
-				"./include/imgs/server.png":"服务器1",
-				"./include/imgs/server2.png":"服务器2",
-				"./include/imgs/router.png":"路由器1",
-				"./include/imgs/exchange.png":"交换机1",
-				"./include/imgs/exchange2.png":"交换机2",
-				"./include/imgs/exchange3.png":"交换机3",
-				"./include/imgs/pc.png":"PC1",
-				"./include/imgs/firewall.png":"防火墙1"
-			},
-			from:"name"
-		},{
-			label:"文字大小",
-			type:"select",
-			name:"label.font.size",
-			values:{
-				"12":"12",
-				"16":"16",
-				"20":"20",
-				"24":"24",
-				"30":"30",
-				"40":"40"
-			},
-			value_type:"num"
-		},{
-			label:"文字颜色",
-			type:"text",
-			name:"label.color"
-		}],
-		edge:[{
-			label:"源关联图形",
-			type:"ajax_select",
-			name:"srcg",
-			from:"ajax",
-			url:path + "?action=ajax_graph"
-		},{
-			label:"对端关联图形",
-			type:"ajax_select",
-			name:"destg",
-			from:"ajax",
-			url:path + "?action=ajax_graph"
-		},{
-			label:"标签",
-			type:"text",
-			name:"name",
-			from:"name"
-		},{
-			label:"粗细",
-			type:"select",
-			name:"edge.width",
-			values:{
-				"1.5":"正常",
-				"1":"细",
-				"3":"粗",
-				"4":"很粗"
-			},
-			value_type:"num"
-		},{
-			label:"实虚",
-			type:"select",
-			name:"dash",
-			values:{
-				"0":"实线",
-				"5":"虚线"
-			}
-		},{
-			label:"显示箭头",
-			type:"select",
-			name:"arrow.to",
-			values:{
-				"1":"显示",
-				"0":"不显示"
-			},
-			value_type:"bool"
-		},{
-			label:"文字大小",
-			type:"select",
-			name:"label.font.size",
-			values:{
-				"12":"12",
-				"16":"16",
-				"20":"20",
-				"24":"24",
-				"30":"30",
-				"40":"40"
-			},
-			value_type:"num"
-		},{
-			label:"文字颜色",
-			type:"text",
-			name:"label.color"
-		},{
-			label:"连线颜色",
-			type:"text",
-			name:"edge.color"
-		}],
-		text:[{
-			label:"标签",
-			type:"text",
-			name:"name",
-			from:"name"
-		},{
-			label:"文字大小",
-			type:"select",
-			name:"label.font.size",
-			values:{
-				"12":"12",
-				"16":"16",
-				"20":"20",
-				"24":"24",
-				"30":"30",
-				"40":"40"
-			},
-			value_type:"num"
-		},{
-			label:"文字颜色",
-			type:"text",
-			name:"label.color"
-		}]
-	};
-	
+	var items = getQuneeFormItems();
 	var setValue = function(obj,node){
 		var input_name = obj.input_name,input_value = obj.input_value,
 			obj_from = obj.from || "style",
@@ -296,31 +122,29 @@
 		$.each(arr,function(index,obj){ // obj为用户的表单配置
 			if(obj.type == "ajax_select" && node.type == "Q.Edge"){ // 构件点击线时候的表单，如果线的起点node没有设置host，或者终点node没有设置host，跳过构件select
 				if(getUserHost(node.from) != "0" && getUserHost(node.to) == "0" && obj.name == "destg"){ // 如果有源端但是没有目的端
-					return;
+					return; // 相当于是continue
 				}else if(getUserHost(node.from) == "0" && getUserHost(node.to) != "0" && obj.name == "srcg"){
 					return;
 				}
 			}
-			
-			
 			html += "<dt>" + obj.label + "</dt>";
 			html += "<dd>";
 			if(obj.type == "text"){
-				html += "<input type='text' name='"+obj.name+"' value='"+(node[obj.name])+"'>";
+				html += "<input type='text' name='"+obj.name+"' value='"+(node[obj.name] || "")+"'>";
 			}else if(obj.type == "select"){
 				html += "<select name='"+obj.name+"'>";
 				//-------------以下用于数据回显--开始
 				var ck_value = "";
 				if(obj.name == "pos"){ // 
-					ck_value = (styles["label.position"] ? (styles["label.position"]+"-"+styles["label.anchor.position"]) : "");
+					ck_value = (styles["label.position"] ? (styles["label.position"]+"-"+styles["label.anchor.position"]) : obj.value);
 				}else if(obj.name == "dash"){
-					ck_value = (styles["edge.line.dash"] ? styles["edge.line.dash"][0] : "");
+					ck_value = (styles["edge.line.dash"] ? styles["edge.line.dash"][0] : obj.value);
 				}else if(obj.name == "image"){
 					ck_value = node.image;
-				}else if(obj.value_type == "bool"){
-					ck_value = (styles[obj.name] ? "1" : "0");
+				//}else if(obj.value_type == "bool"){
+				//	ck_value = (styles[obj.name] ? styles[obj.name] : "1");
 				}else{
-					ck_value = (styles[obj.name] ? styles[obj.name] : "");
+					ck_value = (styles[obj.name] ? styles[obj.name] : obj.value);
 				}
 				//-------------以下用于数据回显--结束
 				$.each(obj.values,function(k,v){
@@ -361,7 +185,7 @@
 		});
 		$html.find("input").addClass('ui-state-default ui-corner-all').css("width","182px");
 		// 颜色默认值是555，
-		var lcolor = (styles && styles["label.color"]) ? styles["label.color"] : "#555",
+		var lcolor = (styles && styles["label.color"]) ? styles["label.color"] : "#333",
 			ecolor = (styles && styles["edge.color"]) ? styles["edge.color"] : "#555",
 			fcolor = (styles && styles["render.color"]) ? styles["render.color"] : "#fff";
 		$html.find("input[name='label.color']").colorpicker({
@@ -381,7 +205,7 @@
 		slideShow:function(config,callback){
 			var node = config.node,node_type = "node";
 			// 标题修改
-			if(node.type == "Q.Node"){
+			if(node.type == "Q.Node" && !node.enableSubNetwork){
 				$("#qpros_title").text("设备信息");
 			}else if(node.type == "Q.Edge"){
 				$("#qpros_title").text("连线信息");
@@ -389,9 +213,9 @@
 			}else if(node.type == "Q.Text"){
 				$("#qpros_title").text("文字信息");
 				node_type = "text";
-			}else if(node.type == "Q.Group"){
-				$("#qpros_title").text("云信息");
-				node_type = "group";
+			}else if(node.type == "Q.Node" && node.enableSubNetwork){
+				$("#qpros_title").text("子网信息");
+				node_type = "sub";
 			}
 			// 构件弹出form
 			var $html = bulidJForm(node_type,node,config);

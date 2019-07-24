@@ -1,7 +1,7 @@
 <?php
 ?>
 <div class="qtools" id="qtools">
-	<button type='button' action="cloud"><i class='fa fa-cloud'></i>添加云</button>
+	<button type='button' action="cloud"><i class='fa fa-cloud'></i>添加子网</button>
 	<button type='button' action="new"><i class='fa fa-desktop'></i>添加设备</button>
 	<button type='button' action="text"><i class='fa fa-font'></i>添加文字</button>
 	<button type='button' action="line"><i class='fa fa-arrow-right'></i>添加连线</button>
@@ -26,7 +26,7 @@
     </div>
 </div>
 <script>
-var graph,host_ids = [];
+var graph,selected_host_ids = [],selected_graph_ids = [],graph_json = {};
 $(function(){
 	// 提供弹出框
    	$(document.body).append("<div id='message' style='display:none;'><span id='spanmessage'></span></div>");
@@ -52,11 +52,12 @@ $(function(){
 
     graph.onElementCreated = function (element, evt) {
         if (element instanceof Q.Edge) { // 如果是连线，需要判断两端的设备是否关联了设备
+        	element.name = ""; // 如果是连线，不需要线上的名字
 			var from = element.from,to = element.to;
-			if(from && from.type == "Q.Node" && (!from.user || !from.user.host || from.user.host == "0" || from.user.host.length <= 0)){
+			if(from && from.type == "Q.Node" && !from.enableSubNetwork && getUserHost(from) == "0"){
 				message("连线开始设备必须要先关联设备！");
 				graph.removeElement(element);
-			}else if(to && to.type == "Q.Node" && (!to.user || !to.user.host || to.user.host == "0" || to.user.host.length <= 0)){ // 必须是节点对象才可以提示判断
+			}else if(to && to.type == "Q.Node" && !to.enableSubNetwork && getUserHost(to) == "0"){ // 必须是节点对象才可以提示判断
 				message("连线结束设备必须要先关联设备！");
 				graph.removeElement(element);
 			}
@@ -88,7 +89,14 @@ $(function(){
 		graph.parseJSON(json);
 	}
 	$(".qpros-clobtn").click(closeQproPanel);
-	refreshHostIds();
+	
+	forEachGraph();
+
+	var timer;
+	if(timer){
+		timer = clearInterval(timer);
+	}
+	timer = setInterval(loadRealGraph,9000);
 });
 
 // 点击确定，节点的数据赋值完成后，回调
@@ -98,30 +106,27 @@ function afterApplyNode(btn,node_type,node){
 		var destg = getUserGraph(node);
 		if(srcg != "0"){ // 选择了源图形
 			var label1 = new Q.LabelUI();
-			label1.position = Q.Position.RIGHT_TOP;
-			label1.anchorPosition = Q.Position.RIGHT_TOP;
-			label1.border = 1;
-			label1.offsetY = 10;
-			label1.showPointer = true;
+			label1.position = Q.Position.LEFT_BOTTOM;
+			label1.anchorPosition = Q.Position.LEFT_BOTTOM;
+			label1.offsetY = -5;
 			label1.padding = 5;
 			label1.alignPosition = Q.Position.LEFT_MIDDLE;
-			label1.data="入口流量：40G\n出口流量：100G";
+			label1.data="获取中...";
 			node.addUI(label1,[{
 				property : "srcLabelName",
 				propertyType : Q.Consts.PROPERTY_TYPE_CLIENT,
 				bindingProperty : "data"
-			}]);	
+			}]);
 		}
 		if(destg != "0"){
 			var label1 = new Q.LabelUI();
-			label1.position = Q.Position.LEFT_BOTTOM;
-			label1.anchorPosition = Q.Position.LEFT_BOTTOM;
-			label1.border = 1;
-			label1.offsetY = -10;
-			label1.showPointer = true;
+			label1.position = Q.Position.RIGHT_BOTTOM;
+			label1.anchorPosition = Q.Position.RIGHT_BOTTOM;
+			label1.offsetY = -5;
 			label1.padding = 5;
 			label1.alignPosition = Q.Position.LEFT_MIDDLE;
-			label1.data="入口流量：100G\n出口流量：10G";
+			//label1.data="入口流量：100G\n出口流量：10G";
+			label1.data="获取中...";
 			node.addUI(label1,[{
 				property : "destLabelName",
 				propertyType : Q.Consts.PROPERTY_TYPE_CLIENT,
@@ -130,7 +135,7 @@ function afterApplyNode(btn,node_type,node){
 		}
 	}
 
-	refreshHostIds();
+	forEachGraph();
 }
 
 // 当下拉框创建成功
@@ -144,7 +149,7 @@ function onSelectMenuCreate($select,node_type,node){
 					$select.empty();
 					var ck_value = getUserHost(node);
 					$.each(data,function(di,dv){
-						if($.inArray(dv.id,host_ids) >= 0 && ck_value != dv.id){ // 说明该设备已经被选中过，不能在选择了
+						if($.inArray(dv.id,selected_host_ids) >= 0 && ck_value != dv.id){ // 说明该设备已经被选中过，不能在选择了
 							return;
 						}
 						var sel = ((ck_value == dv.id) ? "selected='selected'" : '');	
@@ -160,11 +165,15 @@ function onSelectMenuCreate($select,node_type,node){
 			dataType:"json",
 			url:$select.attr("url")+"&host_id=" + ($select.attr("name") == "srcg" ? getUserHost(node.from) : getUserHost(node.to)),
 			success: function(data){
-				if(data){
-					console.info(data);
+				if(data && data.length > 0){ // ----- 这里还少了进行回显的操作
 					$select.empty();
+					var ck_value = getUserGraph(node);
 					$.each(data,function(di,dv){
-						$select.append("<option value='"+dv.local_graph_id+"'>"+dv.title_cache+"</option>");
+						if($.inArray(dv.local_graph_id,selected_graph_ids) >= 0 && ck_value != dv.local_graph_id){ // 说明该图形已经被选中过，不能在选择了
+							return;
+						}
+						var sel = ((ck_value == dv.local_graph_id) ? "selected='selected'" : '');
+						$select.append("<option value='"+dv.local_graph_id+"' "+sel+">"+dv.title_cache+"</option>");
 					});
 					$select.selectmenu("refresh");
 				}
@@ -182,16 +191,60 @@ function onSelectMenuChange($select){
     		text = "新设备";
     	}
     	$select.parentsUntil("#qpros_frm").find("input[name='name']").val(text);
+	}else if($select.attr("name") == "edge.width"){
+		var selected = $select.find("option:selected");
+		var text = selected.text();
+		$select.parentsUntil("#qpros_frm").find("input[name='name']").val(text);
 	}
 }
 
+function loadRealGraph(){
+	forEachGraph(); // 循环页面中的数据
+	if(selected_graph_ids.length <= 0){
+		return;
+	}
+	$.ajax({
+		dataType:"json",
+		url:"qunee.php?action=ajax_data&graph_ids=" + selected_graph_ids.join(","),
+		success: function(data){
+			if(data){
+				for (var key in graph_json) {
+					var res = data[key]; // 该图形的请求输出结果
+					var label = "入口流量："+(res["traffic_in"] || "0")+"\n出口流量：" + (res["traffic_out"] || "0");
+					var node_id = graph_json[key].split("_")[0];
+					var direct = graph_json[key].split("_")[1];
+					var node = graph.getElement(node_id);
+					if(direct == 1){
+						node.set("destLabelName",label);
+					}else{
+						node.set("srcLabelName",label);
+					}
+				}
+			}
+		}
+	});
+}
+
 // 获取页面中所有设备关联的设备ID--为了完成禁止重复关联同一个设备功能使用
-function refreshHostIds(){
-	host_ids = [];
+function forEachGraph(){
+	selected_host_ids = [], selected_graph_ids = [], graph_json = {}; // 清空之前的数据
 	if(!graph) return;
-	graph.forEach(function(e){
-		if(e.type == "Q.Node" && getUserHost(e) != "0"){
-			host_ids.push(e.user.host);
+	graph.forEach(function(node){
+		if(node.type == "Q.Node" && getUserHost(node) != "0"){
+			selected_host_ids.push(getUserHost(node));
+		}
+		if(node.type == "Q.Edge"){ // 获取线两端的label，并且进行ajax请求赋值
+			var srcg = getUserGraph(node,true);
+			var destg = getUserGraph(node);
+			if(srcg != "0") {
+				selected_graph_ids.push(srcg)
+				// 需要知道选择的图形id，对应的是哪个线，并且知道这个图形是在源端还是在目的端，源=0，目的=1
+				graph_json[srcg] = node.id + "_0"; 
+			};
+			if(destg != "0") {
+				selected_graph_ids.push(destg)
+    			graph_json[destg] = node.id + "_1";
+			};
 		}
 	}, graph);
 }
