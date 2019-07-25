@@ -26,7 +26,7 @@
     </div>
 </div>
 <script>
-var graph,selected_host_ids = [],selected_graph_ids = [],graph_json = {};
+var graph,selected_host_ids = [],selected_graph_ids = [],graph_json = {},sub_nodes = [];
 $(function(){
 	// 提供弹出框
    	$(document.body).append("<div id='message' style='display:none;'><span id='spanmessage'></span></div>");
@@ -90,13 +90,12 @@ $(function(){
 	}
 	$(".qpros-clobtn").click(closeQproPanel);
 	
-	forEachGraph();
-
+	loadRealGraph();
 	var timer;
 	if(timer){
 		timer = clearInterval(timer);
 	}
-	timer = setInterval(loadRealGraph,9000);
+	timer = setInterval(loadRealGraph,11000);
 });
 
 // 点击确定，节点的数据赋值完成后，回调
@@ -111,12 +110,12 @@ function afterApplyNode(btn,node_type,node){
 			label1.offsetY = -5;
 			label1.padding = 5;
 			label1.alignPosition = Q.Position.LEFT_MIDDLE;
-			label1.data="获取中...";
 			node.addUI(label1,[{
 				property : "srcLabelName",
 				propertyType : Q.Consts.PROPERTY_TYPE_CLIENT,
 				bindingProperty : "data"
 			}]);
+			node.set("srcLabelName","获取中...");
 		}
 		if(destg != "0"){
 			var label1 = new Q.LabelUI();
@@ -125,13 +124,12 @@ function afterApplyNode(btn,node_type,node){
 			label1.offsetY = -5;
 			label1.padding = 5;
 			label1.alignPosition = Q.Position.LEFT_MIDDLE;
-			//label1.data="入口流量：100G\n出口流量：10G";
-			label1.data="获取中...";
 			node.addUI(label1,[{
 				property : "destLabelName",
 				propertyType : Q.Consts.PROPERTY_TYPE_CLIENT,
 				bindingProperty : "data"
 			}]);	
+			node.set("destLabelName","获取中...");
 		}
 	}
 
@@ -165,9 +163,9 @@ function onSelectMenuCreate($select,node_type,node){
 			dataType:"json",
 			url:$select.attr("url")+"&host_id=" + ($select.attr("name") == "srcg" ? getUserHost(node.from) : getUserHost(node.to)),
 			success: function(data){
-				if(data && data.length > 0){ // ----- 这里还少了进行回显的操作
+				if(data && data.length > 0){
 					$select.empty();
-					var ck_value = getUserGraph(node);
+					var ck_value = getUserGraph(node,($select.attr("name") == "srcg" ? true : false));
 					$.each(data,function(di,dv){
 						if($.inArray(dv.local_graph_id,selected_graph_ids) >= 0 && ck_value != dv.local_graph_id){ // 说明该图形已经被选中过，不能在选择了
 							return;
@@ -179,6 +177,15 @@ function onSelectMenuCreate($select,node_type,node){
 				}
 			}
 		});
+	}else if($select.attr("name") == "sub"){
+		$select.empty();
+		var ck_value = (node.parent ? node.parent.id : 0);
+		$select.append("<option value='0'>无</option>");
+		$.each(sub_nodes,function(di,sub_node){
+			var sel = ((ck_value == sub_node.id) ? "selected='selected'" : '');
+			$select.append("<option value='"+sub_node.id+"' "+sel+">"+sub_node.name+"</option>");
+		});
+		$select.selectmenu("refresh");
 	}
 }
 
@@ -207,17 +214,28 @@ function loadRealGraph(){
 		dataType:"json",
 		url:"qunee.php?action=ajax_data&graph_ids=" + selected_graph_ids.join(","),
 		success: function(data){
-			if(data){
+			if(data && !(typeof data == 'object' && data.constructor == Array)){ // 如果是数组说明格式错误了
 				for (var key in graph_json) {
 					var res = data[key]; // 该图形的请求输出结果
-					var label = "入口流量："+(res["traffic_in"] || "0")+"\n出口流量：" + (res["traffic_out"] || "0");
-					var node_id = graph_json[key].split("_")[0];
-					var direct = graph_json[key].split("_")[1];
-					var node = graph.getElement(node_id);
-					if(direct == 1){
-						node.set("destLabelName",label);
-					}else{
-						node.set("srcLabelName",label);
+					if(res.traffic_in && res.traffic_in != '0k' && res.traffic_out && res.traffic_out != '0k'){
+						var label = "入口流量："+(res.traffic_in || "0")+"\n出口流量：" + (res.traffic_out || "0");
+						var node_id = graph_json[key].split("_")[0];
+						var direct = graph_json[key].split("_")[1];
+						var node = graph.getElement(node_id);
+						// 1、设置流量值
+						if(direct == 1){
+							node.set("destLabelName",label);
+						}else{
+							node.set("srcLabelName",label);
+						}
+						// 2、判断告警
+						if(res.alarm_level && res.alarm_level == 2){
+							node.setStyle("edge.color","#FF0000");
+						}else if(res.alarm_level && res.alarm_level == 1){
+							node.setStyle("edge.color","#FFFF00");
+						}else{
+							node.setStyle("edge.color","#555");
+						}
 					}
 				}
 			}
@@ -227,11 +245,14 @@ function loadRealGraph(){
 
 // 获取页面中所有设备关联的设备ID--为了完成禁止重复关联同一个设备功能使用
 function forEachGraph(){
-	selected_host_ids = [], selected_graph_ids = [], graph_json = {}; // 清空之前的数据
+	selected_host_ids = [], selected_graph_ids = [], graph_json = {},sub_nodes = []; // 清空之前的数据
 	if(!graph) return;
 	graph.forEach(function(node){
 		if(node.type == "Q.Node" && getUserHost(node) != "0"){
 			selected_host_ids.push(getUserHost(node));
+		}
+		if(node.type == "Q.Node" && node.enableSubNetwork){ // 是一个子网
+			sub_nodes.push(node);
 		}
 		if(node.type == "Q.Edge"){ // 获取线两端的label，并且进行ajax请求赋值
 			var srcg = getUserGraph(node,true);

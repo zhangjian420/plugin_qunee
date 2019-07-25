@@ -68,7 +68,7 @@ function qunee_setup_table() {
             `modified_by` int(10) unsigned DEFAULT 1,
             `topo` text COLLATE utf8mb4_unicode_ci DEFAULT NULL,
             PRIMARY KEY (`id`),
-            KEY `name` (`name`) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
+            KEY `name` (`name`)) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;");
     }
     
 }

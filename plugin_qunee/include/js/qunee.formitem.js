@@ -10,7 +10,7 @@ function getQuneeFormItems(){
 			label:"标签位置",
 			type:"select",
 			name:"pos",
-			values:{"ct-cb":"上","cb-ct":"下","lm-rm":"左","rm-lm":"右"},
+			values:{"ct-cb":"上","cb-ct":"下","cm-cm":"中","lm-rm":"左","rm-lm":"右"},
 			value:"cb-ct"
 		},{
 			label:"文字大小",
@@ -85,6 +85,10 @@ function getQuneeFormItems(){
 			label:"文字颜色",
 			type:"text",
 			name:"label.color"
+		},{
+			label:"归属子网",
+			type:"select",
+			name:"sub"
 		}],
 		edge:[{
 			label:"源关联图形",

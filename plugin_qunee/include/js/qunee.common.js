@@ -75,6 +75,8 @@
 			}else if(input_name == "dash"){
 				input_value = parseInt(input_value);
 				node.setStyle("edge.line.dash",[input_value]);
+			}else if(input_name == "sub" && input_value != 0 && input_value != "0"){ // 如果是子网的话，需要将节点放入到子网中
+				node.parent = graph.getElement(input_value);
 			}else{
 				if(obj_value_type == "string"){
 					node.setStyle(input_name,input_value);

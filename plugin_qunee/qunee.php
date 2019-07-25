@@ -327,8 +327,11 @@ function ajax_data(){
         $local_graph_ids = explode(",", $graph_ids);
         if (cacti_sizeof($local_graph_ids)) {
             foreach($local_graph_ids as $local_graph_id) {
-                $local_data_id = get_local_data_id($local_graph_id);
-                $ref_values = qunee_get_ref_value($local_data_id, time(), 60);
+                $local_data = get_local_data($local_graph_id);
+                $ref_values = qunee_get_ref_value($local_data, time(), 60);
+                if (cacti_sizeof($ref_values) == 0) { // 数组里面没有数据
+                    continue;
+                }
                 $ret[$local_graph_id] = $ref_values;
             }
         }
