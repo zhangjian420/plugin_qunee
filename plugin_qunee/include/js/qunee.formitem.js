@@ -59,12 +59,8 @@ function getQuneeFormItems(){
 			values:{
 				"./include/imgs/server.png":"服务器1",
 				"./include/imgs/server2.png":"服务器2",
-				"./include/imgs/router.png":"路由器1",
-				"./include/imgs/exchange.png":"交换机1",
-				"./include/imgs/exchange2.png":"交换机2",
-				"./include/imgs/exchange3.png":"交换机3",
-				"./include/imgs/pc.png":"PC1",
-				"./include/imgs/firewall.png":"防火墙1"
+				"./include/imgs/router1.png":"路由器1",
+				"./include/imgs/exchange1.png":"交换机1"
 			},
 			from:"name"
 		},{
