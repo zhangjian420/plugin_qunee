@@ -15,6 +15,10 @@ $fields_qunee_edit = array(
         'method' => 'hidden',
         'value' => '|arg1:topo|'
     ),
+    'emails' => array(
+        'method' => 'hidden',
+        'value' => '|arg1:emails|'
+    ),
     'name' => array(
         'method' => 'hidden',
         'value' => '|arg1:name|'
@@ -281,16 +285,21 @@ function qunee_edit(){
  */
 function qunee_save(){
     if (isset_request_var('save_component_site')) {
-        cacti_log("进来方法");
-        $save['id']           = get_filter_request_var('id');
-        $save['name']         = form_input_validate(get_nfilter_request_var('name'), 'name', '', false, 3);
-        $save['topo']     = form_input_validate(get_nfilter_request_var('topo'), 'topo', '', true, 3);
+        cacti_log("请求数据id=".get_request_var('id')
+            .",name=".get_request_var('name')
+            .",emails=".get_request_var('emails')
+            .",graph_ids=".get_request_var('graph_ids')
+            .",topo=".get_request_var('topo')
+            , false, 'SYSTEM');
+        $save['id']           = get_request_var('id');
+        $save['name']         = form_input_validate(get_request_var('name'), 'name', '', false, 3);
+        $save['emails']         = form_input_validate(get_request_var('emails'), 'emails', '', true, 3);
+        $save['graph_ids']     = form_input_validate(get_request_var('graph_ids'), 'graph_ids', '', true, 3);
+        $save['topo']     =  form_input_validate(get_request_var('topo'), 'topo', '', true, 3);
         $save['last_modified'] = date('Y-m-d H:i:s', time());
         $save['modified_by']   = $_SESSION['sess_user_id'];
-        cacti_log("参数成功");
         if (!is_error_message()) {
             $qunee_id = sql_save($save, 'plugin_qunee');
-            cacti_log("保存成功");
             if ($qunee_id) {
                 raise_message(1);
             } else {
@@ -324,17 +333,19 @@ function ajax_data(){
     $ret = array();
     if (isset_request_var('graph_ids') && !isempty_request_var("graph_ids")) {
         $graph_ids = get_request_var('graph_ids');
-        $local_graph_ids = explode(",", $graph_ids);
-        if (cacti_sizeof($local_graph_ids)) {
-            foreach($local_graph_ids as $local_graph_id) {
-                $local_data = get_local_data($local_graph_id);
-                $ref_values = qunee_get_ref_value($local_data, time(), 60);
-                if (cacti_sizeof($ref_values) == 0) { // 数组里面没有数据
-                    continue;
+        if(!empty($graph_ids)){
+            $local_datas = get_local_data($graph_ids);
+            if (cacti_sizeof($local_datas)) {
+                foreach($local_datas as $local_data) {
+                    $ref_values = qunee_get_ref_value($local_data, time(), 60);
+                    if (cacti_sizeof($ref_values) == 0) { // 数组里面没有数据
+                        continue;
+                    }
+                    $ret[$local_data["local_graph_id"]] = $ref_values;
                 }
-                $ret[$local_graph_id] = $ref_values;
             }
         }
+        
     }
     print json_encode($ret);
 }

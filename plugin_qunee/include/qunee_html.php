@@ -9,10 +9,9 @@
 	<button type='button' action="del"><i class='fa fa-minus'></i><span>删除</span></button>
 	<button type='button' action="bg"><i class='fa fa-th'></i><span>显示背景</span></button>
 	
-	<button type='button' action="save" style="float: right"><i class='fa fa-save'></i><span>保存</span></button>
+	<button type='button' class="btn-r" action="save"><i class='fa fa-save'></i><span>保存</span></button>
 </div>
 <div class="qpanel" id="canvas">
-	
     <!-- 元素属性栏 -->
     <div class="qpros" id="qpros">
     	<div class="qpros-bannel">
@@ -212,12 +211,12 @@ function loadRealGraph(){
 	}
 	$.ajax({
 		dataType:"json",
-		url:"qunee.php?action=ajax_data&graph_ids=" + selected_graph_ids.join(","),
+		url:"qunee.php?action=ajax_data&topo_id="+$("#id").val()+"&graph_ids=" + selected_graph_ids.join(","),
 		success: function(data){
 			if(data && !(typeof data == 'object' && data.constructor == Array)){ // 如果是数组说明格式错误了
 				for (var key in graph_json) {
 					var res = data[key]; // 该图形的请求输出结果
-					if(res.traffic_in && res.traffic_in != '0k' && res.traffic_out && res.traffic_out != '0k'){
+					if(res && res.traffic_in && res.traffic_in != '0k' && res.traffic_out && res.traffic_out != '0k'){
 						var label = "入口流量："+(res.traffic_in || "0")+"\n出口流量：" + (res.traffic_out || "0");
 						var node_id = graph_json[key].split("_")[0];
 						var direct = graph_json[key].split("_")[1];

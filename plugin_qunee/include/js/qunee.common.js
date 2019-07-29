@@ -46,17 +46,22 @@
 			break;
 		case "save":
 			var json = base64_encode(graph.exportJSON(true));
-			var verify = neirong("拓扑名称",function(value){
-				if(value == "" || value.trim() == "" || value.trim().length <= 0){
+			var verify = biaodan([{
+				label:"邮箱地址",name:"emails",value:$("#emails").val()
+			},{
+				label:"拓扑名称",name:"name",value:$("#name").val()
+			}],function(data){
+				if(data && data.name && data.name == ""){
 					alert("请先输入拓扑名称！");
 					return false;
-				}else{
-					$("#qunee").append("<input type='hidden' name='action' value='save'>");
-					$("#name").val(value);
-					$("#topo").val(json);
-					$("#qunee").submit();
 				}
-			},$("#name").val());
+				$("#qunee").append("<input type='hidden' name='action' value='save'>");
+				$("#qunee").append("<input type='hidden' name='graph_ids' value='"+selected_graph_ids.join(",")+"'>");
+				$("#name").val(data.name);
+				$("#emails").val(data.emails);
+				$("#topo").val(json);
+				$("#qunee").submit();
+			});
 			break;
 		}
 	}
@@ -143,8 +148,8 @@
 					ck_value = (styles["edge.line.dash"] ? styles["edge.line.dash"][0] : obj.value);
 				}else if(obj.name == "image"){
 					ck_value = node.image;
-				//}else if(obj.value_type == "bool"){
-				//	ck_value = (styles[obj.name] ? styles[obj.name] : "1");
+				}else if(obj.value_type == "bool"){
+					ck_value = (styles[obj.name] ? "1" : "0");
 				}else{
 					ck_value = (styles[obj.name] ? styles[obj.name] : obj.value);
 				}
@@ -274,6 +279,37 @@
 				},
 				"确认" : function() {
 					callback.call();//方法回调
+					$(this).dialog("close");
+				}
+			}
+		});
+	}
+	window.biaodan = function(fields,callback){
+		var html = "";
+		if(fields && fields.length > 0){
+			$.each(fields,function(i,v){
+				html += ("<div style='margin-bottom:5px'>"+ v.label 
+						+ "&nbsp;&nbsp;&nbsp;&nbsp;<input type='text' class='ui-state-default ui-corner-all' name='"
+						+v.name+"' value='"
+						+(v.value||"")+"'></div>");
+			});
+		}
+		$("#spanmessage").html(html);
+		$("#message").dialog({
+			title : "消息",
+			modal : true,
+			resizable : false,
+			buttons : {
+				"取消" : function() {
+					$(this).dialog("close");
+				},
+				"确认" : function() {
+					var inputs = $("#spanmessage").find("input");
+					var json = {};
+					inputs.each(function(i,v){
+						json[$(v).attr("name")] = $(v).val();
+					});
+					callback(json);
 					$(this).dialog("close");
 				}
 			}

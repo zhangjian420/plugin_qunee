@@ -5,6 +5,11 @@
 	padding: 5px 0;
 }
 
+.qtools .btn-r{
+	float: right;
+	margin-left: 5px;
+}
+
 .qpanel{
 	height: 500px;
 	width: 85%;
