@@ -90,11 +90,10 @@ $(function(){
 	$(".qpros-clobtn").click(closeQproPanel);
 	
 	loadRealGraph();
-	var timer;
-	if(timer){
-		timer = clearInterval(timer);
+	if(loadGraphTimer){
+		clearInterval(loadGraphTimer);
 	}
-	timer = setInterval(loadRealGraph,11000);
+	loadGraphTimer = setInterval(loadRealGraph,11000);
 });
 
 // 点击确定，节点的数据赋值完成后，回调

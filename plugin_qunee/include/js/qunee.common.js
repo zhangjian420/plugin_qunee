@@ -234,6 +234,8 @@
 		}
 	});
 	
+	window.loadGraphTimer = null;
+	
 	// 获取该节点的host，如果获取不到返回都是字符串 0 
 	window.getUserHost = function(node){
 		try {

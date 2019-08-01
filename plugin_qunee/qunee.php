@@ -285,12 +285,12 @@ function qunee_edit(){
  */
 function qunee_save(){
     if (isset_request_var('save_component_site')) {
-        cacti_log("请求数据id=".get_request_var('id')
-            .",name=".get_request_var('name')
-            .",emails=".get_request_var('emails')
-            .",graph_ids=".get_request_var('graph_ids')
-            .",topo=".get_request_var('topo')
-            , false, 'SYSTEM');
+//         cacti_log("请求数据id=".get_request_var('id')
+//             .",name=".get_request_var('name')
+//             .",emails=".get_request_var('emails')
+//             .",graph_ids=".get_request_var('graph_ids')
+//             .",topo=".get_request_var('topo')
+//             , false, 'SYSTEM');
         $save['id']           = get_request_var('id');
         $save['name']         = form_input_validate(get_request_var('name'), 'name', '', false, 3);
         $save['emails']         = form_input_validate(get_request_var('emails'), 'emails', '', true, 3);
