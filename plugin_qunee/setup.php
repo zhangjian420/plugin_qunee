@@ -16,6 +16,7 @@ function plugin_qunee_install() {
     api_plugin_register_hook('qunee', 'page_head', 'qunee_page_head', 'setup.php');
     
     api_plugin_register_realm('qunee', 'qunee.php', '气象图', 1);
+    api_plugin_register_realm('qunee', 'qunee_devices.php', '气象图设备', 1);
     qunee_setup_table();
 }
 
@@ -60,15 +61,6 @@ function qunee_page_head() {
     print get_md5_include_js('plugins/qunee/include/js/qunee.json.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.formitem.js') . PHP_EOL;
     print get_md5_include_js('plugins/qunee/include/js/qunee.common.js') . PHP_EOL;
-    ?>
-	<script type='text/javascript'>
-	$(function() {
-    	if(loadGraphTimer){
-    		clearInterval(loadGraphTimer);
-    	}
-	});
-	</script>
-	<?php
 }
 
 function plugin_qunee_check_config() {

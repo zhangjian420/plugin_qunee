@@ -2,12 +2,14 @@
 
 // 获取数据源
 function get_local_data($local_graph_ids){
-    $local_datas = db_fetch_assoc("select dl.id as local_data_id,gtg.upper_limit,gtg.local_graph_id,gtg.title_cache  
+    $local_datas = db_fetch_assoc("select dl.id as local_data_id,gtg.upper_limit,gtg.local_graph_id,gtg.title_cache,
+        h.description as host_desc,h.id as host_id  
         from data_local dl
         left join graph_local gl
         on dl.host_id = gl.host_id and dl.snmp_query_id = gl.snmp_query_id 
         and dl.snmp_index = gl.snmp_index
-        left join graph_templates_graph gtg on gl.id = gtg.local_graph_id
+        left join graph_templates_graph gtg on gl.id = gtg.local_graph_id 
+        left join `host` h on gl.host_id = h.id 
         where gl.id in (".$local_graph_ids.")");
     return $local_datas;
 }
@@ -16,11 +18,12 @@ function get_local_data($local_graph_ids){
  * 返回的格式： 单位是 bit
  * array(
         "traffic_in" => value1,
-        "traffic_out" => value2
+        "traffic_out" => value2,
+        "alarm_level" => 
     );
  * @return number[]
  */
-function qunee_get_ref_value($local_data, $ref_time, $time_range){
+function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod){
     if (empty($local_data["local_data_id"])) {
         return array();
     }
@@ -44,7 +47,7 @@ function qunee_get_ref_value($local_data, $ref_time, $time_range){
     return array(
         "traffic_in" => getUnitVal($iv),
         "traffic_out" => getUnitVal($ov),
-        "alarm_level" => getAlarmVal($iv,$ov,$local_data["upper_limit"])
+        "alarm_level" => getAlarmVal($iv,$ov,$local_data["upper_limit"],$alarm_mod)
     );
 }
 
@@ -59,7 +62,7 @@ function pollAlarm(){
                 if (cacti_sizeof($local_datas)) {
                     foreach($local_datas as $local_data) {
                         $now = time();
-                        $ref_values = qunee_get_ref_value($local_data,$now,600);
+                        $ref_values = qunee_get_ref_value($local_data,$now,600,$topo["thold"]/100);
                         if (cacti_sizeof($ref_values) != 0) {
 //                             cacti_log("topo_id=".$topo["id"].",local_graph_id=".$local_data["local_graph_id"]
 //                                 .",local_data_id=".$local_data["local_data_id"]
@@ -102,13 +105,14 @@ function handAlarm($topo,$local_data,$alarm_level,$now){
                 //cacti_log('10分钟还不恢复，根据告警时间，再次发送', false, 'SYSTEM');
                 db_execute("update plugin_qunee_alarm set alarm_time = $now where id = " .$alarm_data["id"]);
                 // 发送告警邮件
-                sendEmail($topo,$local_data,1);
+                sendEmail($topo,$local_data,1,1);
             }
         }
     }else if($alarm_level == 2){ // 之前没有告警过，但是告警级别已经是严重了，插入一条记录并且发出告警
         //cacti_log('根据'. $topo["id"] .'没有查询到告警数据', false, 'SYSTEM');
         $save = array();
         $save["topo_id"] = $topo["id"];
+        $save["host_id"] = $local_data["host_id"];
         $save["local_graph_id"] = $local_data["local_graph_id"];
         $save["local_data_id"] = $local_data["local_data_id"];
         $save["alarm_time"] = $now;
@@ -120,10 +124,11 @@ function handAlarm($topo,$local_data,$alarm_level,$now){
     }
 }
 
-function sendEmail($topo,$local_data,$alarm_status){
+function sendEmail($topo,$local_data,$alarm_status,$is_always = 0){
     if($alarm_status == 0){ // 如果告警状态是已恢复
         //cacti_log('正在发送恢复邮件，发送联系人'.$topo["emails"].",topo_name=".$topo["name"]."，图形名称=".$local_data["title_cache"], false, 'SYSTEM');
         $msg = "拓扑:".$topo["name"]."<br>
+                                           设备名称:".$local_data["host_desc"]."<br>
                                             图形:".$local_data["title_cache"]."<br>
                                             消息:告警已经恢复";
         send_mail($topo["emails"],"","拓扑告警恢复",$msg,"","",true);
@@ -131,8 +136,9 @@ function sendEmail($topo,$local_data,$alarm_status){
     }else {
         //cacti_log('正在发送告警邮件，发送联系人'.$topo["emails"].",topo_name=".$topo["name"]."，图形名称=".$local_data["title_cache"], false, 'SYSTEM');
         $msg = "拓扑:".$topo["name"]."<br>
+                                           设备名称:".$local_data["host_desc"]."<br>
                                             图形:".$local_data["title_cache"]."<br>
-                                            消息:发生告警";
+                                            消息:发生告警 ". ($is_always == 1 ? "，持续时间10分钟未恢复" : "");
         send_mail($topo["emails"],"","拓扑发生告警",$msg,"","",true);
         //cacti_log('成功发送邮件', false, 'SYSTEM');
     }
@@ -151,9 +157,9 @@ function getUnitVal($val){
 }
 
 // 判断告警严重级别
-function getAlarmVal($in,$out,$comp){
+function getAlarmVal($in,$out,$comp,$mod = 0.9){
     //cacti_log("in=".$in.",out=".$out.",comp=".$comp, false, 'SYSTEM');
-    if($in >= ($comp * 0.9) || $out >= ($comp * 0.9)){
+    if($in >= ($comp * $mod) || $out >= ($comp * $mod)){
         //cacti_log("进入严重", false, 'SYSTEM');
         return 2; // 严重
     }else if($in >= ($comp * 0.8) || $out >= ($comp * 0.8)){
@@ -162,4 +168,41 @@ function getAlarmVal($in,$out,$comp){
     }else{
         return 0; // 无告警
     }
+}
+
+/**
+ *       裁剪图片为新的图片   ，如果$newhei不填，默认使用等比例缩放
+ * @param  $src
+ * @param  $newwid
+ * @param  $newhei
+ */
+function imgThrum($src,$dest,$newwid,$newhei = 0){
+    //cacti_log("进入缩放图 " , false, 'SYSTEM');
+    $imgInfo = getimagesize($src);
+    $imgType = image_type_to_extension($imgInfo[2], false);
+    $imagecreatefrom = "imagecreatefrom{$imgType}";
+    $imageout = "image{$imgType}";
+    //cacti_log("图片信息 = " .$imagecreatefrom . ",,," . $imageout, false, 'SYSTEM');
+    //声明图片   打开图片 在内存中
+    $image = $imagecreatefrom($src);
+    // 源图片的宽度和高度
+    $wid=$imgInfo[0];
+    $hei=$imgInfo[1];
+   //cacti_log("元图片宽高 = $wid === $hei" . $imageout, false, 'SYSTEM');
+    if(empty($newhei)){ // 如果没有设置新图片的高度，默认使用等比例缩放
+        $newhei = $newwid/($wid/$hei);
+    }
+   // cacti_log("计算比例宽带 = 56 高度等于 = ".$newhei . $imageout, false, 'SYSTEM');
+    //在内存中建立一张图片
+    $images2 = imagecreatetruecolor($newwid, $newhei); //建立一个500*320的图片
+    //将原图复制到新建图片中
+    imagecopyresampled($images2, $image, 0, 0, 0, 0, $newwid,$newhei, $wid,$hei);
+    if($imgInfo[2] == 2){ // jpg
+        $imageout($images2,$dest,100);
+    }else {
+        $imageout($images2,$dest);
+    }
+    //销毁
+    imagedestroy($image);
+    imagedestroy($images2);
 }

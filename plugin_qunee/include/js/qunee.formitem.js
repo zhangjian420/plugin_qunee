@@ -26,7 +26,7 @@ function getQuneeFormItems(){
 			},
 			value:"12",
 			value_type:"num"
-		},{
+		}/*,{
 			label:"文字颜色",
 			type:"text",
 			name:"label.color"
@@ -34,7 +34,7 @@ function getQuneeFormItems(){
 			label:"填充颜色",
 			type:"text",
 			name:"render.color"
-		}],
+		}*/],
 		node:[{
 			label:"关联设备",
 			type:"ajax_select",
@@ -77,14 +77,24 @@ function getQuneeFormItems(){
 			},
 			value:"12",
 			value_type:"num"
-		},{
+		}/*,{
 			label:"文字颜色",
 			type:"text",
 			name:"label.color"
-		},{
+		}*/,{
 			label:"归属子网",
 			type:"select",
 			name:"sub"
+		},{
+			label:"物理位置",
+			type:"text",
+			name:"phy",
+			from:"name"
+		},{
+			label:"互联IP",
+			type:"text",
+			name:"linkip",
+			from:"name"
 		}],
 		edge:[{
 			label:"源关联图形",
@@ -139,6 +149,7 @@ function getQuneeFormItems(){
 			type:"select",
 			name:"label.font.size",
 			values:{
+				"10":"10",
 				"12":"12",
 				"16":"16",
 				"20":"20",
@@ -146,9 +157,9 @@ function getQuneeFormItems(){
 				"30":"30",
 				"40":"40"
 			},
-			value:"12",
+			value:"10",
 			value_type:"num"
-		},{
+		}/*,{
 			label:"文字颜色",
 			type:"text",
 			name:"label.color"
@@ -156,7 +167,7 @@ function getQuneeFormItems(){
 			label:"连线颜色",
 			type:"text",
 			name:"edge.color"
-		}],
+		}*/],
 		text:[{
 			label:"标签",
 			type:"text",
@@ -176,10 +187,10 @@ function getQuneeFormItems(){
 			},
 			value:"12",
 			value_type:"num"
-		},{
+		}/*,{
 			label:"文字颜色",
 			type:"text",
 			name:"label.color"
-		}]
+		}*/]
 	};
 }

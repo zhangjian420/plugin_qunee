@@ -26,9 +26,11 @@
 </div>
 <script>
 var graph,selected_host_ids = [],selected_graph_ids = [],graph_json = {},sub_nodes = [];
+var loadGraphTimer;
 $(function(){
 	// 提供弹出框
-   	$(document.body).append("<div id='message' style='display:none;'><span id='spanmessage'></span></div>");
+	$(".dmsg").remove();
+   	$(document.body).append("<div id='message' class='dmsg' style='display:none;'><span id='spanmessage'></span></div>");
 	
 	Q.addCSSRule(".maximize",
 	"position: fixed;top: 0px;bottom: 0px;right: 0px;left: 0px;z-index: 1030;height: auto !important;");
@@ -99,6 +101,10 @@ $(function(){
 // 点击确定，节点的数据赋值完成后，回调
 function afterApplyNode(btn,node_type,node){
 	if(node.type == "Q.Edge"){ // 如果给线赋值完成
+		var uis = node.bindingUIs;
+		$.each(uis,function(ix,ui){
+			node.removeUI(ui);
+		});
 		var srcg = getUserGraph(node,true);
 		var destg = getUserGraph(node);
 		if(srcg != "0"){ // 选择了源图形
@@ -107,6 +113,7 @@ function afterApplyNode(btn,node_type,node){
 			label1.anchorPosition = Q.Position.LEFT_BOTTOM;
 			label1.offsetY = -5;
 			label1.padding = 5;
+			label1.fontSize = node.getStyle("label.font.size");
 			label1.alignPosition = Q.Position.LEFT_MIDDLE;
 			node.addUI(label1,[{
 				property : "srcLabelName",
@@ -121,6 +128,7 @@ function afterApplyNode(btn,node_type,node){
 			label1.anchorPosition = Q.Position.RIGHT_BOTTOM;
 			label1.offsetY = -5;
 			label1.padding = 5;
+			label1.fontSize = node.getStyle("label.font.size");
 			label1.alignPosition = Q.Position.LEFT_MIDDLE;
 			node.addUI(label1,[{
 				property : "destLabelName",
@@ -184,6 +192,20 @@ function onSelectMenuCreate($select,node_type,node){
 			$select.append("<option value='"+sub_node.id+"' "+sel+">"+sub_node.name+"</option>");
 		});
 		$select.selectmenu("refresh");
+	}else if($select.attr("name") == "emails"){
+		$.ajax({
+			dataType:"json",
+			url:$select.attr("url"),
+			success: function(data){
+				if(data && data.length > 0){
+					$select.empty();
+					$.each(data,function(di,dv){
+						$select.append("<option value='"+dv.id+"'>"+dv.notiy_name+"</option>");
+					});
+					$select.selectmenu("refresh");
+				}
+			}
+		});
 	}
 }
 
@@ -204,6 +226,7 @@ function onSelectMenuChange($select){
 }
 
 function loadRealGraph(){
+	if(basename($(location).attr('pathname')) != "qunee.php") return;
 	forEachGraph(); // 循环页面中的数据
 	if(selected_graph_ids.length <= 0){
 		return;

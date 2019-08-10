@@ -47,9 +47,11 @@
 		case "save":
 			var json = base64_encode(graph.exportJSON(true));
 			var verify = biaodan([{
-				label:"邮箱地址",name:"emails",value:$("#emails").val()
-			},{
 				label:"拓扑名称",name:"name",value:$("#name").val()
+			},{
+				label:"告警阈值(%)",name:"thold",value:$("#thold").val()
+			},{
+				label:"邮箱地址",name:"emails",value:$("#emails").val()//,from:"qunee.php?action=ajax_emails"
 			}],function(data){
 				if(data && data.name && data.name == ""){
 					alert("请先输入拓扑名称！");
@@ -59,6 +61,7 @@
 				$("#qunee").append("<input type='hidden' name='graph_ids' value='"+selected_graph_ids.join(",")+"'>");
 				$("#name").val(data.name);
 				$("#emails").val(data.emails);
+				$("#thold").val(data.thold);
 				$("#topo").val(json);
 				$("#qunee").submit();
 			});
@@ -234,8 +237,6 @@
 		}
 	});
 	
-	window.loadGraphTimer = null;
-	
 	// 获取该节点的host，如果获取不到返回都是字符串 0 
 	window.getUserHost = function(node){
 		try {
@@ -290,12 +291,27 @@
 		var html = "";
 		if(fields && fields.length > 0){
 			$.each(fields,function(i,v){
-				html += ("<div style='margin-bottom:5px'>"+ v.label 
-						+ "&nbsp;&nbsp;&nbsp;&nbsp;<input type='text' class='ui-state-default ui-corner-all' name='"
+				html += "<div style='margin-bottom:5px'><label style='width:80px;display:inline-block'>"+ v.label + "</label>";
+//				if(v.from){ // 说明是ajax请求
+//					html += "<select name='"+v.name+"' url='"+v.from+"' style='width:170px'>";
+//					html += "<option value='0'>无</option>";
+//					html += "</select>";
+//				}else{
+				html += ("<input type='text' class='ui-state-default ui-corner-all' name='"
 						+v.name+"' value='"
-						+(v.value||"")+"'></div>");
+						+(v.value||"")+"'>");
+//				}
+				html += "</div>";
 			});
 		}
+//		var $html = $(html);
+//		$html.find("select").each(function(si,sv){
+//			$(sv).selectmenu({create: function(){
+//				if(typeof onSelectMenuCreate != 'undefined' && onSelectMenuCreate instanceof Function){
+//					onSelectMenuCreate($(sv));
+//				}
+//			}});
+//		});
 		$("#spanmessage").html(html);
 		$("#message").dialog({
 			title : "消息",
@@ -312,24 +328,6 @@
 						json[$(v).attr("name")] = $(v).val();
 					});
 					callback(json);
-					$(this).dialog("close");
-				}
-			}
-		});
-	}
-	window.neirong = function(label, callback, default_input) {
-		$("#spanmessage").html(label + " <input type='text' class='ui-state-default ui-corner-all' value='"+default_input+"'>");
-		$("#message").dialog({
-			title : "消息",
-			modal : true,
-			resizable : false,
-			buttons : {
-				"取消" : function() {
-					$(this).dialog("close");
-				},
-				"确认" : function() {
-					var text = $("#spanmessage").find("input").val();
-					callback(text);
 					$(this).dialog("close");
 				}
 			}
