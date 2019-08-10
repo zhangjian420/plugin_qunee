@@ -141,7 +141,9 @@ function qunee_devices_save(){
                     move_uploaded_file($_FILES["path"]["tmp_name"], $config['base_path'] . $file_path_src);
                     // 等比例缩放图片
                     imgThrum($config['base_path'] . $file_path_src,$config['base_path'] . $file_path_dest,56);
-                    $save["path"] = $file_path_dest;
+                    $save["path"] = "./upload/" . $now . "." . $ext;
+                    $save["src_path"] = $file_path_src;
+                    $save["abs_path"] = $file_path_dest;
                     $save["file_name"] = $_FILES["path"]["name"];
                 }
             }else{
@@ -339,9 +341,9 @@ function qunee_devices_list(){
 function device_img(){
     global $config;
     $qunee_devices = db_fetch_row_prepared('SELECT * FROM plugin_qunee_devices WHERE id = ?', array(get_request_var('id')));
-    $path = $qunee_devices["path"];
+    $path = $qunee_devices["src_path"];
     $pathinfo = pathinfo($path);
-    $path_src = $config['base_path'] . $pathinfo["dirname"] . "/src/" . $pathinfo["basename"];
+    $path_src = $config['base_path'] . $path;
     if(file_exists($path_src)){
         $img = file_get_contents($path_src,true);
         header("Content-Type: image/".$pathinfo["extension"].";");

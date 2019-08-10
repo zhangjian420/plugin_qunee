@@ -63,6 +63,9 @@ switch(get_nfilter_request_var('action')) {
 	    }
 	    get_allowed_ajax_hosts(false, 'applyFilter', $sql_where);
 	    break;
+	case 'ajax_imgs':
+	    ajax_imgs();
+	    break;
 	case 'ajax_graph':
 	    ajax_graph();
 	    break;
@@ -376,6 +379,17 @@ function ajax_data(){
         
     }
     print json_encode($ret);
+}
+
+function ajax_imgs(){
+    $arr = array();
+    $devices = db_fetch_assoc("select * from plugin_qunee_devices order by id");
+    if (cacti_sizeof($devices)) {
+        foreach($devices as $device) {
+            $arr[] = array('path' => $device['path'],'name' => $device['name']);
+        }
+    }
+    print json_encode($arr);
 }
 
 function ajax_emails(){

@@ -54,14 +54,15 @@ function getQuneeFormItems(){
 			value:"cb-ct"
 		},{
 			label:"设备图形",
-			type:"select",
+			type:"ajax_select",
 			name:"image",
-			values:{
+			/*values:{
 				"./include/imgs/server.png":"服务器1",
 				"./include/imgs/server2.png":"服务器2",
 				"./include/imgs/router1.png":"路由器1",
 				"./include/imgs/exchange1.png":"交换机1"
-			},
+			},*/
+			url:path + "?action=ajax_imgs",
 			from:"name"
 		},{
 			label:"文字大小",

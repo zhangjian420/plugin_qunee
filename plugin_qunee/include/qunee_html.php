@@ -206,6 +206,22 @@ function onSelectMenuCreate($select,node_type,node){
 				}
 			}
 		});
+	}else if($select.attr("name") == "image"){
+		$.ajax({
+			dataType:"json",
+			url:$select.attr("url"),
+			success: function(data){
+				if(data && data.length > 0){
+					$select.empty();
+					var ck_value = node.image;
+					$.each(data,function(di,dv){
+						var sel = ((ck_value == dv.path) ? "selected='selected'" : '');
+						$select.append("<option value='"+dv.path+"' "+sel+">"+dv.name+"</option>");
+					});
+					$select.selectmenu("refresh");
+				}
+			}
+		});
 	}
 }
 
