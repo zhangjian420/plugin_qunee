@@ -48,7 +48,7 @@ $fields_qunee_devices_edit = array(
     )
 );
 
-set_default_action("list");
+set_default_action();
 
 switch(get_nfilter_request_var('action')) {
     case 'edit':
@@ -62,15 +62,13 @@ switch(get_nfilter_request_var('action')) {
 	case 'actions':
 	    form_actions();
 	    break;
-	case 'list':
-	    general_header();
-	    qunee_devices_list();
-	    bottom_footer();
-	    break;
 	case 'img':
 	    device_img();
 	    break;
 	default:
+	    general_header();
+	    qunee_devices_list();
+	    bottom_footer();
 	    break;
 }
 
@@ -85,9 +83,9 @@ function qunee_devices_edit(){
     /* ==================================================== */
     if (!isempty_request_var('id')) {
         $qunee_devices = db_fetch_row_prepared('SELECT * FROM plugin_qunee_devices WHERE id = ?', array(get_request_var('id')));
-        $header_label = __('气象图设备 [编辑: %s]', html_escape($qunee_devices['name']));
+        $header_label = __('拓扑图设备 [编辑: %s]', html_escape($qunee_devices['name']));
     } else {
-        $header_label = __('气象图设备 [新建]');
+        $header_label = __('拓扑图设备 [新建]');
     }
     
     form_start('qunee_devices.php', 'qunee_devices',true);

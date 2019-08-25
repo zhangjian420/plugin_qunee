@@ -23,11 +23,10 @@ function get_local_data($local_graph_ids){
     );
  * @return number[]
  */
-function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod){
+function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod,$alarm_from=0){
     if (empty($local_data["local_data_id"])) {
         return array();
     }
-    
     $result = rrdtool_function_fetch($local_data["local_data_id"], $ref_time-$time_range, $ref_time, $time_range); // 单位是字节，返回时要转行成bit
     $idx_in = array_search("traffic_in", $result['data_source_names']);
     $idx_out = array_search("traffic_out", $result['data_source_names']);
@@ -41,36 +40,72 @@ function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod){
     }else{
         $ov = max($result['values'][$idx_out]) * 8;
     }
+    
+//     cacti_log("local_graph_id = ".$local_data["local_graph_id"].",local_data_id = ".$local_data["local_data_id"]
+//         .",iv = ".$iv.",ov = ".$ov);
+    
     if($iv == 0 && $ov == 0){
         return array();
     }
+    if(!empty($alarm_from)){
+        $alarm_level = getAlarmSubVal($iv,$ov,$local_data["upper_limit"],$alarm_mod);
+    }else{
+        $alarm_level = getAlarmVal($iv,$ov,$local_data["upper_limit"],$alarm_mod);
+    }
     return array(
         "traffic_in" => getUnitVal($iv),
+        "traffic_in_byte" => $iv,
         "traffic_out" => getUnitVal($ov),
-        "alarm_level" => getAlarmVal($iv,$ov,$local_data["upper_limit"],$alarm_mod)
+        "traffic_out_byte" => $ov,
+        "alarm_level" => $alarm_level[0],
+        "cap" => $alarm_level[1]
     );
 }
 
 function pollAlarm(){
     //cacti_log('每次poller后执行', false, 'SYSTEM');
-    $topos = db_fetch_assoc("select * from plugin_qunee");
+    $topos = db_fetch_assoc("select q.id,q.name,q.emails,q.thold,q.graphs,'' as `from`,0 as line_num ,0 as ewidth  
+                    from plugin_qunee q where graphs is not null and graphs !='' union all 
+                    select q.id,q.name,q.emails,q.thold,qs.graphs,'sub' as `from`,qs.line_num,qs.ewidth from plugin_qunee_sub qs 
+                    left join plugin_qunee q on qs.topo_id = q.id where qs.graphs is not null and qs.graphs != '' ");
     if (cacti_sizeof($topos)) {
         foreach($topos as $topo) { // 1、查询所有的拓扑
-            $graph_ids = $topo["graph_ids"];
+//             cacti_log("topo 中 q.id=".$topo["id"].",q.name=".$topo["name"]
+//                 .",q.emails=".$topo["emails"].",graphs=".$topo["graphs"]
+//                 .",from=".$topo["from"].",line_num=".$topo["line_num"].",ewidth=".$topo["ewidth"]);
+            $arr_graphs = explode(",", $topo["graphs"]);
+            $graph_map = array();
+            foreach($arr_graphs as $graph) {
+                $tmp_graphs = explode("_", $graph);
+                $graph_map[$tmp_graphs[0]] = array($tmp_graphs[1],$tmp_graphs[2],$tmp_graphs[3]); // [1] = node_id,[2] = 0src_or_1dest,[3] = is_alarm
+            }
+            $graph_ids = implode(array_keys($graph_map), ",");
+            if (!empty($topo["from"])) {
+                $upper_limit = $topo["ewidth"] / $topo["line_num"]; // 通道容量分母
+                //cacti_log("通道容量计算分母=".$upper_limit);
+            }
             if(!empty($graph_ids)){
                 $local_datas = get_local_data($graph_ids); // 2、获取拓扑中所有图形对应的数据
                 if (cacti_sizeof($local_datas)) {
                     foreach($local_datas as $local_data) {
+                        $is_alarm = $graph_map[$local_data["local_graph_id"]][2];
+                        if ($is_alarm == 0) { // 如果不要发送告警邮件
+                            continue;
+                        }
+                        if(empty($topo["from"])){ // 说明是从主拓扑进入的
+                            $mod = empty($topo) ? 0.9 : $topo["thold"]/100;
+                        }else{ // 从通道容量拓扑进入，固定阈值
+                            $is_src = $graph_map[$local_data["local_graph_id"]][1];
+                            if(isset($is_src) && $is_src == 1){ // 如果图形是目的的话，不用计算是否告警
+                                //cacti_log("是目的图形，不用计算,graph_id=".$local_data["local_graph_id"]);
+                                continue;
+                            }
+                            $local_data["upper_limit"] = $upper_limit;
+                            $mod = 0.3;
+                        }
                         $now = time();
-                        $ref_values = qunee_get_ref_value($local_data,$now,600,$topo["thold"]/100);
+                        $ref_values = qunee_get_ref_value($local_data,$now,60,$mod,$topo["from"]);
                         if (cacti_sizeof($ref_values) != 0) {
-//                             cacti_log("topo_id=".$topo["id"].",local_graph_id=".$local_data["local_graph_id"]
-//                                 .",local_data_id=".$local_data["local_data_id"]
-//                                 .",traffic_in=".$ref_values["traffic_in"]
-//                                 .",traffic_out=".$ref_values["traffic_out"]
-//                                 .",upper_limit=".$local_data["upper_limit"]
-//                                 .",alarm_level=".$ref_values["alarm_level"]
-//                                 , false, 'SYSTEM');
                             handAlarm($topo,$local_data,$ref_values["alarm_level"],$now);
                         }else {
                             cacti_log("根据local_data_id=".$local_data["local_data_id"].'，没有获取到rrd文件数据', false, 'SYSTEM');
@@ -86,8 +121,10 @@ function pollAlarm(){
 
 // 判断是否要发送邮件或者恢复发送恢复邮件
 function handAlarm($topo,$local_data,$alarm_level,$now){
+    $from = empty($topo["from"]) ? "" : $topo["from"];
     $alarm_data = db_fetch_row_prepared("select * from plugin_qunee_alarm where topo_id = ? 
-       and local_graph_id = ? and local_data_id = ?",array($topo["id"],$local_data["local_graph_id"],$local_data["local_data_id"]));
+       and local_graph_id = ? and local_data_id = ? and `from` = ? ",
+        array($topo["id"],$local_data["local_graph_id"],$local_data["local_data_id"],$from));
     if (cacti_sizeof($alarm_data)) { // 说明之前已经告警过了，判断 时间是否大于 10分钟了，并且之前告警的状态
         $alarm_status = $alarm_data["alarm_status"]; // 上次告警状态0-已恢复，1-告警中
         //cacti_log('根据'. $topo["id"] .'查询到以前告警数据，之前的告警状态='.$alarm_status.",新数据告警级别=".$alarm_level, false, 'SYSTEM');
@@ -117,6 +154,7 @@ function handAlarm($topo,$local_data,$alarm_level,$now){
         $save["local_data_id"] = $local_data["local_data_id"];
         $save["alarm_time"] = $now;
         $save["alarm_status"] = 1;
+        $save["from"] = $from;
         sql_save($save, "plugin_qunee_alarm");
         //cacti_log('保存告警结果', false, 'SYSTEM');
         // 发送告警邮件
@@ -125,21 +163,22 @@ function handAlarm($topo,$local_data,$alarm_level,$now){
 }
 
 function sendEmail($topo,$local_data,$alarm_status,$is_always = 0){
+    $prefix  = empty($topo["from"]) ? "" : "通道容量";
     if($alarm_status == 0){ // 如果告警状态是已恢复
         //cacti_log('正在发送恢复邮件，发送联系人'.$topo["emails"].",topo_name=".$topo["name"]."，图形名称=".$local_data["title_cache"], false, 'SYSTEM');
         $msg = "拓扑:".$topo["name"]."<br>
                                            设备名称:".$local_data["host_desc"]."<br>
                                             图形:".$local_data["title_cache"]."<br>
-                                            消息:告警已经恢复";
-        send_mail($topo["emails"],"","拓扑告警恢复",$msg,"","",true);
+                                            消息:".$prefix."告警已经恢复";
+        send_mail($topo["emails"],"","拓扑".$prefix."告警恢复",$msg,"","",true);
         //cacti_log('成功发送邮件', false, 'SYSTEM');
     }else {
         //cacti_log('正在发送告警邮件，发送联系人'.$topo["emails"].",topo_name=".$topo["name"]."，图形名称=".$local_data["title_cache"], false, 'SYSTEM');
         $msg = "拓扑:".$topo["name"]."<br>
                                            设备名称:".$local_data["host_desc"]."<br>
                                             图形:".$local_data["title_cache"]."<br>
-                                            消息:发生告警 ". ($is_always == 1 ? "，持续时间10分钟未恢复" : "");
-        send_mail($topo["emails"],"","拓扑发生告警",$msg,"","",true);
+                                            消息:".$prefix."发生告警 ". ($is_always == 1 ? "，持续时间10分钟未恢复" : "");
+        send_mail($topo["emails"],"","拓扑".$prefix."发生告警",$msg,"","",true);
         //cacti_log('成功发送邮件', false, 'SYSTEM');
     }
 }
@@ -158,15 +197,27 @@ function getUnitVal($val){
 
 // 判断告警严重级别
 function getAlarmVal($in,$out,$comp,$mod = 0.9){
-    //cacti_log("in=".$in.",out=".$out.",comp=".$comp, false, 'SYSTEM');
-    if($in >= ($comp * $mod) || $out >= ($comp * $mod)){
+    $v = $in > $out ? $out : $in; // 如果最小的值都大于0.8，那么肯定也会告警
+    $v1 = $in > $out ? $in : $out;
+    $cap = number_format($v1/$comp*100,2);
+    if($v >= ($comp * $mod)){
         //cacti_log("进入严重", false, 'SYSTEM');
-        return 2; // 严重
-    }else if($in >= ($comp * 0.8) || $out >= ($comp * 0.8)){
+        return array(2,$cap); // 严重
+    }else if($v >= ($comp * 0.8)){
         //cacti_log("进入一般", false, 'SYSTEM');
-        return 1; // 一般
+        return array(1,$cap); // 一般
     }else{
-        return 0; // 无告警
+        return array(0,$cap); // 无告警
+    }
+}
+
+function getAlarmSubVal($in,$out,$comp,$mod = 0.3){
+    $v = $in > $out ? $in : $out;
+    $cap = number_format($v/$comp*100,2);
+    if($v < ($comp * $mod)){
+        return array(2,$cap); // 严重
+    }else{
+        return array(0,$cap); // 严重
     }
 }
 

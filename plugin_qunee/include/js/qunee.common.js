@@ -7,7 +7,7 @@
 			subnetwork.enableSubNetwork = true;
 			break;
 		case "new":
-			var node = graph.createNode("新设备",graph.viewportBounds.x + 50,graph.viewportBounds.y + 50);
+			var node = graph.createNode("新设备",graph.viewportBounds.x + 60,graph.viewportBounds.y + 60);
 			node.image = "./include/imgs/server.png";
 			break;
 		case "text":
@@ -58,13 +58,32 @@
 					return false;
 				}
 				$("#qunee").append("<input type='hidden' name='action' value='save'>");
-				$("#qunee").append("<input type='hidden' name='graph_ids' value='"+selected_graph_ids.join(",")+"'>");
+				$("#qunee").append("<input type='hidden' name='graphs' value='"+selected_graphs.join(",")+"'>");
 				$("#name").val(data.name);
 				$("#emails").val(data.emails);
 				$("#thold").val(data.thold);
 				$("#topo").val(json);
 				$("#qunee").submit();
 			});
+			break;
+		case "import":
+			queren("导入前需要保存拓扑，否则会丢失未保存数据？",function(){
+				var id = getQueryParam("id");
+				var href = "qunee.php?action=import";
+				if(id != null){
+					window.location.href = href + "&topo_id="+id;
+				}else{
+					window.location.href = href;
+				}
+			});
+			break;
+		case "save_sub":
+			var json = base64_encode(graph.exportJSON(true));
+			$("#qunee_sub").append("<input type='hidden' name='action' value='sub_save'>");
+			$("#qunee_sub").append("<input type='hidden' name='graphs' value='"+selected_graphs.join(",")+"'>");
+			$("#qunee_sub").append("<input type='hidden' name='topo' value='"+json+"'>");
+			$("#qunee_sub").append("<input type='hidden' name='line_num' value='"+line_num+"'>");
+			$("#qunee_sub").submit();
 			break;
 		}
 	}
@@ -98,7 +117,16 @@
 		case "name":
 			node[obj.name] = input_value;
 			break;
-		case "ajax":
+		case "user":
+			if(input_name == "ewidth"){
+				if(isNaN(input_value)){
+					message("带宽必须为数字！");
+					return;
+				}
+				var w1 = parseFloat((parseFloat(input_value)/32).toFixed(1));
+				w1 = w1 > 1 ? w1 : 1;
+				node.setStyle("edge.width",w1);
+			}
 			var user = node.user || {};
 			user[input_name] = input_value;
 			node.user = user;
@@ -140,7 +168,9 @@
 			html += "<dt>" + obj.label + "</dt>";
 			html += "<dd>";
 			if(obj.type == "text"){
-				html += "<input type='text' name='"+obj.name+"' value='"+(node[obj.name] || "")+"'>";
+				// 如果是从自定义属性中获取值，没有获取到，然后从node属性中获取。
+				var objv = (obj.from == "user" ? getUserPro(node,obj.name,obj.value || "") : (node[obj.name] || obj.value || ""));
+				html += "<input type='text' name='"+obj.name+"' value='"+objv+"' class='ui-state-default ui-corner-all' style='width:182px;' >";
 			}else if(obj.type == "select"){
 				html += "<select name='"+obj.name+"'>";
 				//-------------以下用于数据回显--开始
@@ -153,6 +183,8 @@
 					ck_value = node.image;
 				}else if(obj.value_type == "bool"){
 					ck_value = (styles[obj.name] ? "1" : "0");
+				}else if(obj.from == "user"){
+					ck_value = getUserPro(node,obj.name,obj.value);
 				}else{
 					ck_value = (styles[obj.name] ? styles[obj.name] : obj.value);
 				}
@@ -166,6 +198,9 @@
 				html += "<select name='"+obj.name+"' url='"+obj.url+"'>";
 				html += "<option value='0'>无</option>";
 				html += "</select>";
+			}else if(obj.type == "texta"){
+				var objv = (obj.from == "user" ? getUserPro(node,obj.name,obj.value || "") : (node[obj.name] || ""));
+				html += "<textarea name='"+obj.name+"' class='ui-state-default ui-corner-all' style='width:194px;height:40px'>"+objv+"</textarea>";
 			}
 			html += "</dd>";
 		});
@@ -193,7 +228,6 @@
 				}
 			}});
 		});
-		$html.find("input").addClass('ui-state-default ui-corner-all').css("width","182px");
 		// 颜色默认值是555，
 		var lcolor = (styles && styles["label.color"]) ? styles["label.color"] : "#333",
 			ecolor = (styles && styles["edge.color"]) ? styles["edge.color"] : "#555",
@@ -238,25 +272,24 @@
 	});
 	
 	// 获取该节点的host，如果获取不到返回都是字符串 0 
-	window.getUserHost = function(node){
+	window.getUserPro = function(node,name,defv){
 		try {
-			return node.user.host || "0";
+			return node.user[name] || defv || "0";
 		} catch (e) {
-			return "0";
+			return defv || "0";
+		}
+	}
+	window.getUserHost = function(node){
+		return getUserPro(node,"host");
+	};
+	window.getUserGraph = function(node,isFrom){
+		if(isFrom){
+			return getUserPro(node,"srcg");
+		}else{
+			return getUserPro(node,"destg");
 		}
 	};
 	
-	window.getUserGraph = function(node,isFrom){
-		try {
-			if(isFrom){
-				return node.user.srcg || "0";
-			}else{
-				return node.user.destg || "0";
-			}
-		} catch (e) {
-			return "0";
-		}
-	};
 	
 	window.message = function(text) {
 		$("#spanmessage").text(text);
@@ -332,5 +365,24 @@
 				}
 			}
 		});
+	}
+	window.inSelectGraphs = function(selected_graphs,local_graph_id){
+		var ix = -1;
+		if(!selected_graphs || selected_graphs.length == 0){
+			return ix;
+		}
+		$.each(selected_graphs,function(i,selected_graph){
+			var selected_graph_id = selected_graph.split("_")[0];
+			if(selected_graph_id == local_graph_id){
+				ix = i;
+				return;
+			}
+		});
+		return ix;
+	}
+	window.getQueryParam = function(name){
+	     var reg = new RegExp("(^|&)"+ name +"=([^&]*)(&|$)");
+	     var r = window.location.search.substr(1).match(reg);
+	     if(r!=null)return unescape(r[2]); return null;
 	}
 }(Q, jQuery));

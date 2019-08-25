@@ -39,7 +39,7 @@ function getQuneeFormItems(){
 			label:"关联设备",
 			type:"ajax_select",
 			name:"host",
-			from:"ajax",
+			from:"user",
 			url:path + "?action=ajax_host"
 		},{
 			label:"标签",
@@ -87,40 +87,34 @@ function getQuneeFormItems(){
 			type:"select",
 			name:"sub"
 		},{
-			label:"物理位置",
-			type:"text",
-			name:"phy",
-			from:"name"
-		},{
 			label:"互联IP",
 			type:"text",
 			name:"linkip",
-			from:"name"
+			from:"user"
+		},{
+			label:"物理位置",
+			type:"texta",
+			name:"phy",
+			from:"user"
 		}],
 		edge:[{
 			label:"源关联图形",
 			type:"ajax_select",
 			name:"srcg",
-			from:"ajax",
+			from:"user",
 			url:path + "?action=ajax_graph"
 		},{
 			label:"对端关联图形",
 			type:"ajax_select",
 			name:"destg",
-			from:"ajax",
+			from:"user",
 			url:path + "?action=ajax_graph"
 		},{
-			label:"带宽",
-			type:"select",
-			name:"edge.width",
-			values:{
-				"1":"10G",
-				"1.5":"50G",
-				"3":"100G",
-				"4":"500G"
-			},
-			value:"1.5",
-			value_type:"num"
+			label:"带宽(G)",
+			type:"text",
+			name:"ewidth",
+			value:"50",
+			from:"user"
 		},{
 			label:"标签",
 			type:"text",
@@ -150,6 +144,7 @@ function getQuneeFormItems(){
 			type:"select",
 			name:"label.font.size",
 			values:{
+				"8":"8",
 				"10":"10",
 				"12":"12",
 				"16":"16",
@@ -158,17 +153,19 @@ function getQuneeFormItems(){
 				"30":"30",
 				"40":"40"
 			},
-			value:"10",
+			value:"8",
 			value_type:"num"
-		}/*,{
-			label:"文字颜色",
-			type:"text",
-			name:"label.color"
 		},{
-			label:"连线颜色",
-			type:"text",
-			name:"edge.color"
-		}*/],
+			label:"关闭告警",
+			type:"select",
+			name:"alarm",
+			values:{
+				"1":"开启",
+				"0":"关闭"
+			},
+			value:"1",
+			from:"user"
+		}],
 		text:[{
 			label:"标签",
 			type:"text",

@@ -11,7 +11,8 @@
 }
 
 .qpanel{
-	height: 500px;
+	min-height: 500px;
+	height:500px;
 	width: 85%;
 	margin: 0 auto;
 	background: #fff;
@@ -75,6 +76,7 @@
 
 .dl-horizontal dd {
 	line-height: 30px;
-    height: 30px;
+    /* height: 30px; */
+    min-height:30px;
     margin-left: 90px;
 }
