@@ -178,57 +178,56 @@ function afterApplyNode(btn,node_type,node){
 }
 
 // 当下拉框创建成功
-function onSelectMenuCreate($select,node_type,node){
+function onSelectMenuCreate($select,node_type,node,$searchable){
 	if($select.attr("name") == "host"){
-		$('#' + $select.attr("id") + '-menu').css('max-height', '250px');
+		$searchable.clear();
 		$.ajax({
 			dataType:"json",
 			url:$select.attr("url"),
 			success: function(data){
 				if(data && data.length > 0){
-					$select.empty();
 					var ck_value = getUserHost(node);
 					$.each(data,function(di,dv){
 						if($.inArray(dv.id,selected_host_ids) >= 0 && ck_value != dv.id){ // 说明该设备已经被选中过，不能在选择了
 							return;
 						}
-						var sel = ((ck_value == dv.id) ? "selected='selected'" : '');	
-						$select.append("<option value='"+dv.id+"' "+sel+">"+dv.value+"</option>");
+						var sel = ((ck_value == dv.id) ? true : false);	
+						$searchable.appendItems([{value:dv.id,text:dv.value,selected:sel}]);
 					});
-					$select.selectmenu("refresh");
+					if(ck_value != "0" && node.edgeCount != 0){
+						$searchable.disabled();
+					}
 				}
 			}
 		});
 	}else if($select.attr("name") == "srcg" || $select.attr("name") == "destg"){ // 源端和对端下拉框创建成功后，选择图形
-		$('#' + $select.attr("id") + '-menu').css('max-height', '250px');
+		$searchable.clear();
 		$.ajax({
 			dataType:"json",
 			url:$select.attr("url")+"&host_id=" + ($select.attr("name") == "srcg" ? getUserHost(node.from) : getUserHost(node.to)),
 			success: function(data){
 				if(data && data.length > 0){
-					$select.empty();
 					var ck_value = getUserGraph(node,($select.attr("name") == "srcg" ? true : false));
 					$.each(data,function(di,dv){
 						if(inSelectGraphs(selected_graphs,dv.local_graph_id) >= 0 && ck_value != dv.local_graph_id){ // 说明该图形已经被选中过，不能在选择了
 							return;
 						}
-						var sel = ((ck_value == dv.local_graph_id) ? "selected='selected'" : '');
-						$select.append("<option value='"+dv.local_graph_id+"' "+sel+">"+dv.title_cache+"</option>");
+						var sel = ((ck_value == dv.local_graph_id) ? true : false);
+						$searchable.appendItems([{value:dv.local_graph_id,text:dv.title_cache,selected:sel}]);
 					});
-					$select.selectmenu("refresh");
 				}
 			}
 		});
 	}else if($select.attr("name") == "sub"){
-		$select.empty();
+		$searchable.clear();
 		var ck_value = (node.parent ? node.parent.id : 0);
-		$select.append("<option value='0'>无</option>");
+		$searchable.appendItems([{value:"0",text:"无",selected:true}]);
 		$.each(sub_nodes,function(di,sub_node){
-			var sel = ((ck_value == sub_node.id) ? "selected='selected'" : '');
-			$select.append("<option value='"+sub_node.id+"' "+sel+">"+sub_node.name+"</option>");
+			var sel = ((ck_value == sub_node.id) ? true : false);
+			$searchable.appendItems([{value:sub_node.id,text:sub_node.name,selected:sel}]);
 		});
-		$select.selectmenu("refresh");
 	}else if($select.attr("name") == "image"){
+		$searchable.clear();
 		$.ajax({
 			dataType:"json",
 			url:$select.attr("url"),
@@ -237,10 +236,9 @@ function onSelectMenuCreate($select,node_type,node){
 					$select.empty();
 					var ck_value = node.image;
 					$.each(data,function(di,dv){
-						var sel = ((ck_value == dv.path) ? "selected='selected'" : '');
-						$select.append("<option value='"+dv.path+"' "+sel+">"+dv.name+"</option>");
+						var sel = ((ck_value == dv.path) ? true : false);
+						$searchable.appendItems([{value:dv.path,text:dv.name,selected:sel}]);
 					});
-					$select.selectmenu("refresh");
 				}
 			}
 		});
@@ -248,7 +246,7 @@ function onSelectMenuCreate($select,node_type,node){
 }
 
 // 当切换下拉框
-function onSelectMenuChange($select){
+function onSelectMenuChange($select,node_type,node,$searchable){
 	if($select.attr("name") == "host"){
     	var selected = $select.find("option:selected");
     	var text = selected.text();
@@ -276,7 +274,7 @@ function loadRealGraph(){
 					if(res && res.traffic_in && res.traffic_in != '0k' && res.traffic_out && res.traffic_out != '0k'){
 						var label = "入："+(res.traffic_in || "0")+"\n出：" + (res.traffic_out || "0");
 						var node_id = arr[1];
-						var direct = arr[2];
+						var direct = arr[3];
 						var node = graph.getElement(node_id);
 						// 1、设置流量值
 						if(direct == 1){
@@ -315,12 +313,13 @@ function forEachGraph(){
 		if(node.type == "Q.Edge"){ // 获取线两端的label，并且进行ajax请求赋值
 			var srcg = getUserGraph(node,true);
 			var destg = getUserGraph(node);
+			var alarm = getUserPro(node,"alarm","1");
 			if(srcg != "0") {
 				// 需要知道选择的图形id，对应的是哪个线，并且知道这个图形是在源端还是在目的端，源=0，目的=1
-				selected_graphs.push(srcg + "_" + node.id + "_0")
+				selected_graphs.push(srcg + "_" + node.id + "_" + getUserHost(node.from) + "_0_" + alarm);
 			};
 			if(destg != "0") {
-				selected_graphs.push(destg + "_" + node.id + "_1")
+				selected_graphs.push(destg + "_" + node.id + "_" + getUserHost(node.to) + "_1_" + alarm);
 			};
 		}
 	}, graph);

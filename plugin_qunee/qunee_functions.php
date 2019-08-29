@@ -63,6 +63,7 @@ function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod,$ala
 }
 
 function pollAlarm(){
+    global $config;
     //cacti_log('每次poller后执行', false, 'SYSTEM');
     $topos = db_fetch_assoc("select q.id,q.name,q.emails,q.thold,q.graphs,'' as `from`,0 as line_num ,0 as ewidth  
                     from plugin_qunee q where graphs is not null and graphs !='' union all 
@@ -76,8 +77,10 @@ function pollAlarm(){
             $arr_graphs = explode(",", $topo["graphs"]);
             $graph_map = array();
             foreach($arr_graphs as $graph) {
+                // [0] = graph_id,[1] = node_id,[2] = host_id ,[3] = 0src_or_1dest,[4] = is_alarm
                 $tmp_graphs = explode("_", $graph);
-                $graph_map[$tmp_graphs[0]] = array($tmp_graphs[1],$tmp_graphs[2],$tmp_graphs[3]); // [1] = node_id,[2] = 0src_or_1dest,[3] = is_alarm
+                // 存入后 [0] = node_id,[1] = host_id ,[2] = 0src_or_1dest,[3] = is_alarm
+                $graph_map[$tmp_graphs[0]] = array($tmp_graphs[1],$tmp_graphs[2],$tmp_graphs[3],$tmp_graphs[4]); 
             }
             $graph_ids = implode(array_keys($graph_map), ",");
             if (!empty($topo["from"])) {
@@ -88,14 +91,21 @@ function pollAlarm(){
                 $local_datas = get_local_data($graph_ids); // 2、获取拓扑中所有图形对应的数据
                 if (cacti_sizeof($local_datas)) {
                     foreach($local_datas as $local_data) {
-                        $is_alarm = $graph_map[$local_data["local_graph_id"]][2];
+                        $host_id = $graph_map[$local_data["local_graph_id"]][1];
+                        if (api_plugin_is_enabled('maint')) { // 判断主机是否正在维护
+                            include_once($config['base_path'] . '/plugins/maint/functions.php');
+                            if (plugin_maint_check_cacti_host($host_id)) {
+                                continue;
+                            }
+                        }
+                        $is_alarm = $graph_map[$local_data["local_graph_id"]][3];
                         if ($is_alarm == 0) { // 如果不要发送告警邮件
                             continue;
                         }
                         if(empty($topo["from"])){ // 说明是从主拓扑进入的
                             $mod = empty($topo) ? 0.9 : $topo["thold"]/100;
                         }else{ // 从通道容量拓扑进入，固定阈值
-                            $is_src = $graph_map[$local_data["local_graph_id"]][1];
+                            $is_src = $graph_map[$local_data["local_graph_id"]][2];
                             if(isset($is_src) && $is_src == 1){ // 如果图形是目的的话，不用计算是否告警
                                 //cacti_log("是目的图形，不用计算,graph_id=".$local_data["local_graph_id"]);
                                 continue;

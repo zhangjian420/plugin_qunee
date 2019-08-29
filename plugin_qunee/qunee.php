@@ -52,11 +52,7 @@ switch(get_nfilter_request_var('action')) {
         form_actions();
         break;
     case 'ajax_host':
-        $sql_where = '';
-        if (get_request_var('site_id') > 0) {
-            $sql_where = 'site_id = ' . get_request_var('site_id');
-        }
-        get_allowed_ajax_hosts(false, 'applyFilter', $sql_where);
+        ajax_hosts();
         break;
     case 'ajax_imgs':
         ajax_imgs();
@@ -181,6 +177,20 @@ function qunee_list(){
 						</select>
 					</td>
 					<td>
+						拓扑图
+					</td>
+					<td>
+						<select id='test1' class="searchableSelect">
+							<option value="jQuery插件库">jQuery插件库</option>
+                          <option value="BlackBerry">BlackBerry</option>
+                          <option value="device">device</option>
+                          <option value="with">with</option>
+                          <option value="entertainment">entertainment</option>
+                          <option value="and">and</option>
+                          <option value="social">social</option>
+						</select>
+					</td>
+					<td>
 						<span>
 							<input type='button' class='ui-button ui-corner-all ui-widget' id='refresh' value='<?php print __esc('Go');?>' title='<?php print __esc('Set/Refresh Filters');?>'>
 							<input type='button' class='ui-button ui-corner-all ui-widget' id='clear' value='<?php print __esc('Clear');?>' title='<?php print __esc('Clear Filters');?>'>
@@ -215,6 +225,26 @@ function qunee_list(){
 				$('#form_qunee').submit(function(event) {
 					event.preventDefault();
 					applyFilter();
+				});
+				var s1 = $('#test1').searchableSelect({
+					show_srch:true,
+					afterShow:function(){
+						var me = this;
+						console.info(me);
+						me.clear();
+						$.ajax({
+							dataType:"json",
+							async:false,
+							url:"qunee.php?action=ajax_host",
+							success: function(data){
+								if(data && data.length > 0){
+									$.each(data,function(di,dv){
+										me.appendItems([{value:dv.id,text:dv.value}]);
+									});
+								}
+							}
+						});
+					}
 				});
 			});
 
@@ -384,12 +414,17 @@ function ajax_graph(){
 
 function ajax_data(){
     $ret = array();
+    //cacti_log("ajax_data = " . get_request_var('graphs'));
     if (!isempty_request_var("graphs")) {
         $arr_graphs = explode(",", get_request_var('graphs'));
         $graph_map = array();
         foreach($arr_graphs as $graph) {
             $tmp_graphs = explode("_", $graph);
-            $graph_map[$tmp_graphs[0]] = array($tmp_graphs[1],$tmp_graphs[2],$tmp_graphs[3]); // [1] = node_id,[2] = 0src_or_1dest,[3] = is_alarm
+            if(sizeof($tmp_graphs) == 4){
+                $tmp_graphs[4] = "1"; // 如果没有传递告警，默认就是告警
+            }
+            // [0] =graph_id,[1] = node_id,[2] = host_id ,[3] = 0src_or_1dest,[4] = is_alarm
+            $graph_map[$tmp_graphs[0]] = array($tmp_graphs[1],$tmp_graphs[2],$tmp_graphs[3],$tmp_graphs[4]); 
         }
         // 根据topoID去查询拓扑的信息，
         if (!isempty_request_var("topo_id")) {
@@ -422,6 +457,18 @@ function ajax_data(){
         
     }
     print json_encode($ret);
+}
+
+function ajax_hosts(){
+    $return = array();
+    $total_rows = -1;
+    $hosts = get_allowed_devices("", 'description', -1, $total_rows);
+    if (cacti_sizeof($hosts)) {
+        foreach($hosts as $host) {
+            $return[] = array('label' => $host['description'], 'value' => $host['description'], 'id' => $host['id']);
+        }
+    }
+    print json_encode($return);
 }
 
 function ajax_imgs(){

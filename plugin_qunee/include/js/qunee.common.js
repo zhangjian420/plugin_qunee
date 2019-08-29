@@ -172,7 +172,7 @@
 				var objv = (obj.from == "user" ? getUserPro(node,obj.name,obj.value || "") : (node[obj.name] || obj.value || ""));
 				html += "<input type='text' name='"+obj.name+"' value='"+objv+"' class='ui-state-default ui-corner-all' style='width:182px;' >";
 			}else if(obj.type == "select"){
-				html += "<select name='"+obj.name+"'>";
+				html += "<select name='"+obj.name+"' class='searchableSelect' style='width:182px'>";
 				//-------------以下用于数据回显--开始
 				var ck_value = "";
 				if(obj.name == "pos"){ // 
@@ -195,7 +195,7 @@
 				});
 				html += "</select>";
 			}else if(obj.type == "ajax_select"){ // 在 afterShowQproPanel 中设置 加载
-				html += "<select name='"+obj.name+"' url='"+obj.url+"'>";
+				html += "<select class='searchableSelect' show_srch='true' name='"+obj.name+"' url='"+obj.url+"'>";
 				html += "<option value='0'>无</option>";
 				html += "</select>";
 			}else if(obj.type == "texta"){
@@ -217,14 +217,14 @@
 				config.afterApplyNode($html.find("button")[0],node_type,node);
 			}
 		});
-		$html.find("select").each(function(si,sv){
-			$(sv).selectmenu({create: function(){
+		$html.find("select.searchableSelect").each(function(si,sv){
+			$(sv).searchableSelect({width:168,show_srch:$(sv).attr("show_srch"),onBuildItemSuccess: function(){
 				if(typeof onSelectMenuCreate != 'undefined' && onSelectMenuCreate instanceof Function){
-					onSelectMenuCreate($(sv),node_type,node);
+					onSelectMenuCreate($(sv),node_type,node,this);
 				}
-			},change:function(){
+			},afterItemClick:function(){
 				if(typeof onSelectMenuChange != 'undefined' && onSelectMenuChange instanceof Function){
-					onSelectMenuChange($(sv),node_type,node);
+					onSelectMenuChange($(sv),node_type,node,this);
 				}
 			}});
 		});

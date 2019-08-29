@@ -118,9 +118,8 @@ function afterApplyNode(btn,node_type,node){
 }
 
 // 当下拉框创建成功
-function onSelectMenuCreate($select,node_type,node){
+function onSelectMenuCreate($select,node_type,node,$searchable){
 	if($select.attr("name") == "srcg" || $select.attr("name") == "destg"){ // 源端和对端下拉框创建成功后，选择图形
-		$('#' + $select.attr("id") + '-menu').css('max-height', '250px');
 		$.ajax({
 			dataType:"json",
 			url:$select.attr("url")+"&host_id=" + ($select.attr("name") == "srcg" ? getUserHost(node.from) : getUserHost(node.to)),
@@ -132,10 +131,9 @@ function onSelectMenuCreate($select,node_type,node){
 						if(inSelectGraphs(selected_graphs,dv.local_graph_id) >= 0 && ck_value != dv.local_graph_id){ // 说明该图形已经被选中过，不能在选择了
 							return;
 						}
-						var sel = ((ck_value == dv.local_graph_id) ? "selected='selected'" : '');
-						$select.append("<option value='"+dv.local_graph_id+"' "+sel+">"+dv.title_cache+"</option>");
+						var sel = ((ck_value == dv.local_graph_id) ? true : false);
+						$searchable.appendItems([{value:dv.local_graph_id,text:dv.title_cache,selected:sel}]);
 					});
-					$select.selectmenu("refresh");
 				}
 			}
 		});
@@ -164,7 +162,7 @@ function loadRealGraph(){
 					var res = data[arr[0]]; // 该图形的请求输出结果
 					if(res && res.traffic_in && res.traffic_in != '0k' && res.traffic_out && res.traffic_out != '0k'){
 						var node_id = arr[1];
-						var direct = arr[2];
+						var direct = arr[3];
 						var node = graph.getElement(node_id);
 						// 1、设置通道占比
 						if(direct == 0){ // 计算源的通道容量
@@ -198,11 +196,11 @@ function forEachGraph(){
 			var alarm = getUserPro(node,"alarm","1");
 			if(srcg != "0") {
 				// 需要知道选择的图形id，对应的是哪个线，并且知道这个图形是在源端还是在目的端，源=0，目的=1
-				selected_graphs.push(srcg + "_" + node.id + "_0_" + alarm);
+				selected_graphs.push(srcg + "_" + node.id + "_" + getUserHost(node.from) + "_0_" + alarm);
     			line_num++;
 			};
 			if(destg != "0") {
-				selected_graphs.push(destg + "_" + node.id + "_1_" + alarm);
+				selected_graphs.push(destg + "_" + node.id + "_" + getUserHost(node.to) + "_1_" + alarm);
 			};
 		}
 	}, graph);
