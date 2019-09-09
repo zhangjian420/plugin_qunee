@@ -27,7 +27,7 @@ function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod,$ala
     if (empty($local_data["local_data_id"])) {
         return array();
     }
-    $result = rrdtool_function_fetch($local_data["local_data_id"], $ref_time-$time_range, $ref_time, $time_range); // 单位是字节，返回时要转行成bit
+    $result = rrdtool_function_fetch($local_data["local_data_id"], $ref_time-$time_range, $ref_time-1, $time_range); // 单位是字节，返回时要转行成bit
     $idx_in = array_search("traffic_in", $result['data_source_names']);
     $idx_out = array_search("traffic_out", $result['data_source_names']);
     if (!isset($result['values'][$idx_in]) || count($result['values'][$idx_in]) == 0) {
@@ -210,6 +210,7 @@ function getAlarmVal($in,$out,$comp,$mod = 0.9){
     $v = $in > $out ? $out : $in; // 如果最小的值都大于0.8，那么肯定也会告警
     $v1 = $in > $out ? $in : $out;
     $cap = number_format($v1/$comp*100,2);
+    //cacti_log("in=".$in.",out=".$out.",comp=".$comp.",v=".$v.",cm=".($comp * $mod));
     if($v >= ($comp * $mod)){
         //cacti_log("进入严重", false, 'SYSTEM');
         return array(2,$cap); // 严重

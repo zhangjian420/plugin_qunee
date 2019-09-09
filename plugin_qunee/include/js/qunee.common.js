@@ -123,8 +123,8 @@
 					message("带宽必须为数字！");
 					return;
 				}
-				var w1 = parseFloat((parseFloat(input_value)/32).toFixed(1));
-				w1 = w1 > 1 ? w1 : 1;
+				var ewidth = parseInt(input_value);
+				var w1 = (ewidth <= 1 ? 1 : (ewidth >= 100 ? 2.5 : 1.7));
 				node.setStyle("edge.width",w1);
 			}
 			var user = node.user || {};

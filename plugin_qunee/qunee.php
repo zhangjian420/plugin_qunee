@@ -177,20 +177,6 @@ function qunee_list(){
 						</select>
 					</td>
 					<td>
-						拓扑图
-					</td>
-					<td>
-						<select id='test1' class="searchableSelect">
-							<option value="jQuery插件库">jQuery插件库</option>
-                          <option value="BlackBerry">BlackBerry</option>
-                          <option value="device">device</option>
-                          <option value="with">with</option>
-                          <option value="entertainment">entertainment</option>
-                          <option value="and">and</option>
-                          <option value="social">social</option>
-						</select>
-					</td>
-					<td>
 						<span>
 							<input type='button' class='ui-button ui-corner-all ui-widget' id='refresh' value='<?php print __esc('Go');?>' title='<?php print __esc('Set/Refresh Filters');?>'>
 							<input type='button' class='ui-button ui-corner-all ui-widget' id='clear' value='<?php print __esc('Clear');?>' title='<?php print __esc('Clear Filters');?>'>
@@ -225,26 +211,6 @@ function qunee_list(){
 				$('#form_qunee').submit(function(event) {
 					event.preventDefault();
 					applyFilter();
-				});
-				var s1 = $('#test1').searchableSelect({
-					show_srch:true,
-					afterShow:function(){
-						var me = this;
-						console.info(me);
-						me.clear();
-						$.ajax({
-							dataType:"json",
-							async:false,
-							url:"qunee.php?action=ajax_host",
-							success: function(data){
-								if(data && data.length > 0){
-									$.each(data,function(di,dv){
-										me.appendItems([{value:dv.id,text:dv.value}]);
-									});
-								}
-							}
-						});
-					}
 				});
 			});
 
