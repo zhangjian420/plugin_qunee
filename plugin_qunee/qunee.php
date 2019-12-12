@@ -222,21 +222,18 @@ function qunee_list(){
 	
 	/* form the 'where' clause for our main sql query */
 	if (get_request_var('filter') != '') {
-	    $sql_where = "WHERE (name LIKE '%" . get_request_var('filter') . "%')";
+	    $sql_where = "and (name LIKE '%" . get_request_var('filter') . "%') and topo is not null";
 	} else {
 	    $sql_where = '';
 	}
-	if (empty($sql_where)) {
-	    $sql_where .= " where topo is not null ";
-	}else {
-	    $sql_where .= " and topo is not null ";
-	}
 	
-	$total_rows = db_fetch_cell("SELECT COUNT(*) FROM plugin_qunee $sql_where");
+	$total_rows = db_fetch_cell("SELECT COUNT(*) FROM plugin_qunee a left join user_auth_perms b 
+        on b.item_id = a.id and b.type = 101 and b.user_id = ".$_SESSION['sess_user_id']." where b.item_id is null $sql_where");
+	
 	$sql_order = get_order_string();
 	$sql_limit = ' LIMIT ' . ($rows*(get_request_var('page')-1)) . ',' . $rows;
-	
-	$qunee_list = db_fetch_assoc("SELECT * FROM plugin_qunee 
+	$qunee_list = db_fetch_assoc("SELECT a.* FROM plugin_qunee a LEFT JOIN user_auth_perms b 
+            ON b.item_id = a.id and b.type = 101 and b.user_id = ".$_SESSION['sess_user_id']." where b.item_id is null 
 		$sql_where
 		$sql_order
 		$sql_limit");
@@ -398,9 +395,29 @@ function ajax_data(){
         }
         $graph_ids = implode(array_keys($graph_map), ",");
         //cacti_log("封装得到graph_ids = " . $graph_ids);
-        if (!isempty_request_var("line_num")) {
-            $upper_limit = get_request_var("ewidth") / get_request_var("line_num"); // 通道容量分母
-            //cacti_log("ewidth = ".get_request_var("ewidth").",line_num = ".get_request_var("line_num").",upper_limit=".$upper_limit);
+        $now = time();
+        if (!isempty_request_var("line_num")) { // 说明是子拓扑
+            // 1、先获取父图形实时流量，将其作为分母
+            $src_graph_id = get_request_var("src_graph_id");
+            $local_datas = get_local_data($src_graph_id);
+            $v = 0;
+            if(cacti_sizeof($local_datas) && !empty($local_datas[0])){
+                $src_local_data_id = $local_datas[0]["local_data_id"];
+                $data_values = qunee_get_localdata_val($src_local_data_id,$now,60);
+                //cacti_log(json_encode($data_values));
+                if(!empty($data_values)){
+                    $iv = $data_values["traffic_in"];
+                    $ov = $data_values["traffic_out"];
+                    $v = $iv > $ov ? $iv : $ov;
+                }
+            }
+            //$upper_limit = get_request_var("ewidth") / get_request_var("line_num"); // 通道容量分母
+            $upper_limit = $v / get_request_var("line_num"); // 通道容量分母
+            //cacti_log("分母=".$upper_limit);
+            if($upper_limit == 0){
+                print json_encode($ret);
+                return;
+            }
         }
         if(!empty($graph_ids)){
             $local_datas = get_local_data($graph_ids);
@@ -412,7 +429,7 @@ function ajax_data(){
                         $local_data["upper_limit"] = $upper_limit;
                         $mod = 0.3;
                     }
-                    $ref_values = qunee_get_ref_value($local_data, time(),60,$mod,get_request_var("from"));
+                    $ref_values = qunee_get_ref_value($local_data, $now,60,$mod,get_request_var("from"));
                     if (cacti_sizeof($ref_values) == 0) { // 数组里面没有数据
                         continue;
                     }
@@ -430,6 +447,7 @@ function ajax_hosts(){
     $total_rows = -1;
     $hosts = get_allowed_devices("", 'description', -1, $total_rows);
     if (cacti_sizeof($hosts)) {
+        $return[] = array("label"=>"不关联","value"=>"不关联","id"=>"0");
         foreach($hosts as $host) {
             $return[] = array('label' => $host['description'], 'value' => $host['description'], 'id' => $host['id']);
         }
@@ -683,6 +701,10 @@ function qunee_sub_edit(){
         'ewidth' => array(
             'method' => 'hidden',
             'value' => get_request_var("ewidth") * 1000000000
+        ),
+        'src_graph_id' => array(
+            'method' => 'hidden',
+            'value' => get_request_var("src_graph_id")
         ),
         'save_component_site' => array(
             'method' => 'hidden',

@@ -138,7 +138,7 @@ function qunee_devices_save(){
                     $file_path_dest = "/plugins/qunee/upload/" . $now . "." . $ext;
                     move_uploaded_file($_FILES["path"]["tmp_name"], $config['base_path'] . $file_path_src);
                     // 等比例缩放图片
-                    imgThrum($config['base_path'] . $file_path_src,$config['base_path'] . $file_path_dest,56);
+                    imgThrum($config['base_path'] . $file_path_src,$config['base_path'] . $file_path_dest,20);
                     $save["path"] = "./upload/" . $now . "." . $ext;
                     $save["src_path"] = $file_path_src;
                     $save["abs_path"] = $file_path_dest;

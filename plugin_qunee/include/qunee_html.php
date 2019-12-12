@@ -11,6 +11,7 @@
 	
 	<button type='button' class="btn-r" action="save"><i class='fa fa-save'></i><span>保存</span></button>
 	<button type='button' class="btn-r" action="import"><i class='fa fa-upload'></i><span>导入设备</span></button>
+	<button type='button' class="btn-r" action="back"><i class='fa fa-undo'></i><span>返回列表</span></button>
 </div>
 <div class="qpanel" id="canvas">
     <!-- 元素属性栏 -->
@@ -62,13 +63,15 @@ $(function(){
         	element.name = ""; // 如果是连线，不需要线上的名字
         	element.setStyle(Q.Styles.ARROW_TO, false);
 			var from = element.from,to = element.to;
+			/*console.info(from);
+			console.info(to);
 			if(from && from.type == "Q.Node" && !from.enableSubNetwork && getUserHost(from) == "0"){
 				message("连线开始设备必须要先关联设备！");
 				graph.removeElement(element);
 			}else if(to && to.type == "Q.Node" && !to.enableSubNetwork && getUserHost(to) == "0"){ // 必须是节点对象才可以提示判断
 				message("连线结束设备必须要先关联设备！");
 				graph.removeElement(element);
-			}
+			}*/
         }
     }
 
@@ -95,7 +98,7 @@ $(function(){
 				window.open("qunee.php?action=sub&node_id="
 						+element.id+"&topo_id="+$("#id").val()+"&node_src_id="
 						+getUserHost(element.from)+"&node_dest_id="+getUserHost(element.to)
-						+"&ewidth="+(ewidth));
+						+"&ewidth="+(ewidth)+"&src_graph_id="+getUserGraph(element,true));
 			}
 		}
 	});

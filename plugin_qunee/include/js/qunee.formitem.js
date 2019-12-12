@@ -17,6 +17,8 @@ function getQuneeFormItems(){
 			type:"select",
 			name:"label.font.size",
 			values:{
+				"8":"8",
+				"10":"10",
 				"12":"12",
 				"16":"16",
 				"20":"20",
@@ -24,7 +26,7 @@ function getQuneeFormItems(){
 				"30":"30",
 				"40":"40"
 			},
-			value:"12",
+			value:"10",
 			value_type:"num"
 		}/*,{
 			label:"文字颜色",
@@ -69,6 +71,8 @@ function getQuneeFormItems(){
 			type:"select",
 			name:"label.font.size",
 			values:{
+				"8":"8",
+				"10":"10",
 				"12":"12",
 				"16":"16",
 				"20":"20",
@@ -76,7 +80,7 @@ function getQuneeFormItems(){
 				"30":"30",
 				"40":"40"
 			},
-			value:"12",
+			value:"10",
 			value_type:"num"
 		}/*,{
 			label:"文字颜色",
@@ -110,7 +114,7 @@ function getQuneeFormItems(){
 			from:"user",
 			url:path + "?action=ajax_graph"
 		},{
-			label:"带宽(G)",
+			label:"线路宽度(G)",
 			type:"text",
 			name:"ewidth",
 			value:"50",
@@ -176,6 +180,8 @@ function getQuneeFormItems(){
 			type:"select",
 			name:"label.font.size",
 			values:{
+				"8":"8",
+				"10":"10",
 				"12":"12",
 				"16":"16",
 				"20":"20",

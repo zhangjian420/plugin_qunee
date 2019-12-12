@@ -14,20 +14,12 @@ function get_local_data($local_graph_ids){
     return $local_datas;
 }
 
-/**
- * 返回的格式： 单位是 bit
- * array(
-        "traffic_in" => value1,
-        "traffic_out" => value2,
-        "alarm_level" => 
-    );
- * @return number[]
- */
-function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod,$alarm_from=0){
-    if (empty($local_data["local_data_id"])) {
+// 获取某个数据源 一段范围的值
+function qunee_get_localdata_val($local_data_id,$ref_time, $time_range){
+    if (empty($local_data_id)) {
         return array();
     }
-    $result = rrdtool_function_fetch($local_data["local_data_id"], $ref_time-$time_range, $ref_time-1, $time_range); // 单位是字节，返回时要转行成bit
+    $result = rrdtool_function_fetch($local_data_id, $ref_time-$time_range, $ref_time-1, $time_range); // 单位是字节，返回时要转行成bit
     $idx_in = array_search("traffic_in", $result['data_source_names']);
     $idx_out = array_search("traffic_out", $result['data_source_names']);
     if (!isset($result['values'][$idx_in]) || count($result['values'][$idx_in]) == 0) {
@@ -40,13 +32,48 @@ function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod,$ala
     }else{
         $ov = max($result['values'][$idx_out]) * 8;
     }
-    
-//     cacti_log("local_graph_id = ".$local_data["local_graph_id"].",local_data_id = ".$local_data["local_data_id"]
-//         .",iv = ".$iv.",ov = ".$ov);
-    
     if($iv == 0 && $ov == 0){
         return array();
     }
+    return array("traffic_in"=>$iv,"traffic_out"=>$ov);
+}
+
+/**
+ * 返回的格式： 单位是 bit
+ * array(
+        "traffic_in" => value1,
+        "traffic_out" => value2,
+        "alarm_level" => 
+    );
+ * @return number[]
+ */
+function qunee_get_ref_value($local_data, $ref_time, $time_range,$alarm_mod,$alarm_from=0){
+    $data_values = qunee_get_localdata_val($local_data["local_data_id"], $ref_time, $time_range);
+    if(empty($data_values)){
+        return array();
+    }
+//     if (empty($local_data["local_data_id"])) {
+//         return array();
+//     }
+//     $result = rrdtool_function_fetch($local_data["local_data_id"], $ref_time-$time_range, $ref_time-1, $time_range); // 单位是字节，返回时要转行成bit
+//     $idx_in = array_search("traffic_in", $result['data_source_names']);
+//     $idx_out = array_search("traffic_out", $result['data_source_names']);
+//     if (!isset($result['values'][$idx_in]) || count($result['values'][$idx_in]) == 0) {
+//         $iv = 0;
+//     }else {
+//         $iv = max($result['values'][$idx_in]) * 8;
+//     }
+//     if (!isset($result['values'][$idx_out]) || count($result['values'][$idx_out]) == 0) {
+//         $ov = 0;
+//     }else{
+//         $ov = max($result['values'][$idx_out]) * 8;
+//     }
+//     if($iv == 0 && $ov == 0){
+//         return array();
+//     }
+    $iv = $data_values["traffic_in"];
+    $ov = $data_values["traffic_out"];
+    
     if(!empty($alarm_from)){
         $alarm_level = getAlarmSubVal($iv,$ov,$local_data["upper_limit"],$alarm_mod);
     }else{
@@ -207,14 +234,13 @@ function getUnitVal($val){
 
 // 判断告警严重级别
 function getAlarmVal($in,$out,$comp,$mod = 0.9){
-    $v = $in > $out ? $out : $in; // 如果最小的值都大于0.8，那么肯定也会告警
     $v1 = $in > $out ? $in : $out;
     $cap = number_format($v1/$comp*100,2);
     //cacti_log("in=".$in.",out=".$out.",comp=".$comp.",v=".$v.",cm=".($comp * $mod));
-    if($v >= ($comp * $mod)){
+    if($v1 >= ($comp * $mod)){
         //cacti_log("进入严重", false, 'SYSTEM');
         return array(2,$cap); // 严重
-    }else if($v >= ($comp * 0.8)){
+    }else if($v1 >= ($comp * 0.8)){
         //cacti_log("进入一般", false, 'SYSTEM');
         return array(1,$cap); // 一般
     }else{

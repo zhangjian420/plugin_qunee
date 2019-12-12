@@ -1,11 +1,3 @@
-<?php
-if(empty($save["topo"])){ // 说明之前页面中没有
-    $src_host = db_fetch_row_prepared("select id,description from host where id = ?",array(get_request_var("node_src_id")));
-    $dest_host = db_fetch_row_prepared("select id,description from host where id = ?",array(get_request_var("node_dest_id")));
-}else{
-    
-}
-?>
 <div class="qtools" id="qtools">
 	<button type='button' action="line"><i class='fa fa-arrow-right'></i>添加连线</button>
 	<button type='button' action="defa" style="display: none"><i class='fa fa-arrow-right'></i>取消连线</button>
@@ -154,7 +146,7 @@ function loadRealGraph(){
 	$.ajax({
 		dataType:"json",
 		url:"qunee.php?action=ajax_data&from=sub"+"&graphs="+selected_graphs.join(",")
-				+"&line_num="+line_num+"&ewidth="+$("#ewidth").val(),
+				+"&line_num="+line_num+"&ewidth="+$("#ewidth").val()+"&src_graph_id="+$("#src_graph_id").val(),
 		success: function(data){
 			if(data && !(typeof data == 'object' && data.constructor == Array)){ // 如果是数组说明格式错误了
 				$.each(selected_graphs,function(idx,selected_graph){

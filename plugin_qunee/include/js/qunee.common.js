@@ -8,6 +8,7 @@
 			break;
 		case "new":
 			var node = graph.createNode("新设备",graph.viewportBounds.x + 60,graph.viewportBounds.y + 60);
+			node.setStyle("label.font.size",10);
 			node.image = "./include/imgs/server.png";
 			break;
 		case "text":
@@ -84,6 +85,9 @@
 			$("#qunee_sub").append("<input type='hidden' name='topo' value='"+json+"'>");
 			$("#qunee_sub").append("<input type='hidden' name='line_num' value='"+line_num+"'>");
 			$("#qunee_sub").submit();
+			break;
+		case "back":
+			history.back();
 			break;
 		}
 	}
