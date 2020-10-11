@@ -227,13 +227,15 @@ function qunee_list(){
 	    $sql_where = '';
 	}
 	
-	$total_rows = db_fetch_cell("SELECT COUNT(*) FROM plugin_qunee a left join user_auth_perms b 
-        on b.item_id = a.id and b.type = 101 and b.user_id = ".$_SESSION['sess_user_id']." where b.item_id is null $sql_where");
+	$total_rows = db_fetch_cell("SELECT COUNT(*) FROM plugin_qunee a left join user_auth_group_perms b 
+        on b.item_id = a.id and b.type = 101 and b.group_id = (select group_id from user_auth_group_members where user_id =". $_SESSION['sess_user_id'] . ")
+        where b.item_id is null $sql_where");
 	
 	$sql_order = get_order_string();
 	$sql_limit = ' LIMIT ' . ($rows*(get_request_var('page')-1)) . ',' . $rows;
-	$qunee_list = db_fetch_assoc("SELECT a.* FROM plugin_qunee a LEFT JOIN user_auth_perms b 
-            ON b.item_id = a.id and b.type = 101 and b.user_id = ".$_SESSION['sess_user_id']." where b.item_id is null 
+	$qunee_list = db_fetch_assoc("SELECT a.* FROM plugin_qunee a LEFT JOIN user_auth_group_perms b 
+         ON b.item_id = a.id and b.type = 101 and b.group_id = (select group_id from user_auth_group_members where user_id =". $_SESSION['sess_user_id'] . ") 
+         where b.item_id is null 
 		$sql_where
 		$sql_order
 		$sql_limit");

@@ -145,7 +145,7 @@ function pollAlarm(){
                         if (cacti_sizeof($ref_values) != 0) {
                             handAlarm($topo,$local_data,$ref_values["alarm_level"],$now);
                         }else {
-                            cacti_log("根据local_data_id=".$local_data["local_data_id"].'，没有获取到rrd文件数据', false, 'SYSTEM');
+                            //cacti_log("根据local_data_id=".$local_data["local_data_id"].'，没有获取到rrd文件数据', false, 'SYSTEM');
                         }
                     }
                 }
